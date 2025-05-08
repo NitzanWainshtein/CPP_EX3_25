@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Player.hpp"
+#include "../../GameLogic/Game.hpp"
 #include <string>
 
 namespace coup {

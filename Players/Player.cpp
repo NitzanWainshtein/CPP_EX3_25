@@ -1,5 +1,5 @@
 #include "Player.hpp"
-#include "Game.hpp"
+#include "../GameLogic/Game.hpp"
 #include <stdexcept>
 
 #include "../GameLogic/BankManager.hpp"
@@ -7,7 +7,8 @@
 namespace coup {
     Player::Player(Game &game, const std::string &name)
         : game(game), name(name), coins(0), sanctioned(false), arrested(false),
-          lastAction(ActionType::None), lastActionTarget(nullptr), actionBlocked(false), bribeUsedThisTurn(false) {
+          lastAction(ActionType::None), lastActionTarget(nullptr), actionBlocked(false), arrestBlocked(false),
+          bribeUsedThisTurn(false) {
         game.addPlayer(this);
     }
 
@@ -20,7 +21,7 @@ namespace coup {
     bool Player::isSanctioned() const { return this->sanctioned; }
     ActionType Player::getLastAction() const { return this->lastAction; }
     void Player::blockLastAction() { this->actionBlocked = true; }
-
+    void Player::blockArrestNextTurn() { this->arrestBlocked = true; }
     int Player::taxAmount() const { return 2; }
 
     void Player::startTurn() {
@@ -52,6 +53,7 @@ namespace coup {
 
         sanctioned = false;
         arrested = false;
+        arrestBlocked = false;
         game.nextTurn();
     }
 
@@ -79,10 +81,17 @@ namespace coup {
 
     void Player::arrest(Player &player) {
         if (game.turn() != name) throw std::runtime_error("Not your turn");
+        if (this->arrestBlocked) {
+            throw std::runtime_error("You are blocked from using arrest this turn");
+        }
         if (player.name == name) throw std::runtime_error("Cannot arrest yourself");
         if (player.arrested) throw std::runtime_error("Player was arrested last turn");
-        if (player.coins == 0) throw std::runtime_error("Player has no coins");
-        BankManager::transferCoins(player, *this, 1);
+        if (player.coins == 0 || (player.getRoleName() == "Merchant" && player.coins < 2)) throw std::runtime_error("Player doesn't have enough coins to be arrested");
+        if (player.getRoleName() == "Merchant") {
+            BankManager::transferToBank(player, game, 2);
+        } else {
+            BankManager::transferCoins(player, *this, 1);
+        }
         player.arrested = true;
         lastAction = ActionType::Arrest;
         lastActionTarget = &player;

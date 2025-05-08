@@ -29,6 +29,7 @@ namespace coup {
         Player *lastActionTarget;
         bool actionBlocked;
         bool bribeUsedThisTurn;
+        bool arrestBlocked;
 
     public:
         Player(Game &game, const std::string &name);
@@ -45,9 +46,11 @@ namespace coup {
 
         void blockLastAction();
 
+        void blockArrestNextTurn();
+
         void setCoins(int coins);
 
-        void startTurn();
+        virtual void startTurn();
 
         void gather();
 
