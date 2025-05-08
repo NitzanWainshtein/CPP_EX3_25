@@ -6,8 +6,8 @@ namespace coup {
     Game::Game() : current_turn_index(0), bank(200) {
     }
 
-    bool Game::nameExists(const std::string& name) const {
-        for (const auto& player : player_list) {
+    bool Game::nameExists(const std::string &name) const {
+        for (const auto &player: player_list) {
             if (player != nullptr && player->getName() == name) {
                 return true;
             }
@@ -85,5 +85,10 @@ namespace coup {
             if (p != nullptr) return p->getName();
         }
         throw std::runtime_error("No players remaining");
+    }
+
+    void Game::resetPlayers() {
+        player_list.clear();
+        current_turn_index = 0;
     }
 } // namespace coup

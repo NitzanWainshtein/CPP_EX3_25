@@ -23,7 +23,7 @@ namespace coup {
         std::string turn() const;
         void nextTurn();
         void eliminate(Player& player);
-
+        void resetPlayers();
         int getBank() const;
         void addToBank(int amount);
         void takeFromBank(int amount);
