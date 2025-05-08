@@ -1,5 +1,6 @@
 #include "Governor.hpp"
 #include "../../GameLogic/Game.hpp"
+#include "../../GameLogic/BankManager.hpp"
 #include <stdexcept>
 
 namespace coup {
@@ -8,15 +9,13 @@ namespace coup {
         : Player(game, name) {}
 
     void Governor::tax() {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
+        startTurn();
         if (sanctioned) throw std::runtime_error("Cannot tax, player is under sanctions");
-        game.takeFromBank(taxAmount());
-        coins += taxAmount();
-        lastAction = ActionType::Tax;
-    }
 
-    int Governor::taxAmount() const {
-        return 3;
+        BankManager::transferFromBank(game, *this, taxAmount());
+        lastAction = ActionType::Tax;
+
+        endTurn();
     }
 
     void Governor::undo(Player &player) {
@@ -26,8 +25,12 @@ namespace coup {
         player.blockLastAction();
     }
 
-    std::string Governor::roleName() const {
+    int Governor::taxAmount() const {
+        return 3;
+    }
+
+    std::string Governor::getRoleName() const {
         return "Governor";
     }
 
-} // namespace coup
+}

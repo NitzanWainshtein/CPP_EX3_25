@@ -1,18 +1,33 @@
 #include "Game.hpp"
-#include "Player.hpp"
+#include "../Players/Player.hpp"
 #include <stdexcept>
 
 namespace coup {
+    Game::Game() : current_turn_index(0), bank(200) {
+    }
 
-    Game::Game() : current_turn_index(0), bank(200) {}
+    bool Game::nameExists(const std::string& name) const {
+        for (const auto& player : player_list) {
+            if (player != nullptr && player->getName() == name) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-    void Game::addPlayer(Player* player) {
+
+    void Game::addPlayer(Player *player) {
+        for (const auto &existing: player_list) {
+            if (existing != nullptr && existing->getName() == player->getName()) {
+                throw std::runtime_error("Player name '" + player->getName() + "' already exists");
+            }
+        }
         player_list.push_back(player);
     }
 
     std::vector<std::string> Game::players() const {
         std::vector<std::string> names;
-        for (const auto& p : player_list) {
+        for (const auto &p: player_list) {
             if (p != nullptr) {
                 names.push_back(p->getName());
             }
@@ -32,7 +47,7 @@ namespace coup {
         } while (player_list[current_turn_index] == nullptr);
     }
 
-    void Game::eliminate(Player& player) {
+    void Game::eliminate(Player &player) {
         for (size_t i = 0; i < player_list.size(); ++i) {
             if (player_list[i] == &player) {
                 player_list[i] = nullptr;
@@ -58,7 +73,7 @@ namespace coup {
 
     bool Game::isGameOver() const {
         int count = 0;
-        for (const Player* p : player_list) {
+        for (const Player *p: player_list) {
             if (p != nullptr) ++count;
         }
         return count == 1;
@@ -66,10 +81,9 @@ namespace coup {
 
     std::string Game::winner() const {
         if (!isGameOver()) throw std::runtime_error("Game is not over yet");
-        for (const Player* p : player_list) {
+        for (const Player *p: player_list) {
             if (p != nullptr) return p->getName();
         }
         throw std::runtime_error("No players remaining");
     }
-
 } // namespace coup

@@ -1,37 +1,37 @@
-# Compiler
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g -IPlayers -IGameLogic
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
 
+# ספריות
+INCLUDES = -IPlayers -IGameLogic -IGUI
+LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
-# Directories
-SRC_DIR = .
-GAME_DIR = GameLogic
-PLAYER_DIR = Players
-ROLES_DIR = $(PLAYER_DIR)/Roles
+# קבצים
+SRC = main.cpp \
+      GameLogic/Game.cpp \
+      GameLogic/BankManager.cpp \
+      GameLogic/PlayerFactory.cpp \
+      Players/Player.cpp \
+      Players/Roles/Governor.cpp \
+      Players/Roles/Baron.cpp \
+      Players/Roles/Spy.cpp \
+      GUI/GUI.cpp
 
-# Files
-MAIN = main.cpp
-OBJS = \
-	$(GAME_DIR)/Game.cpp \
-	$(PLAYER_DIR)/Player.cpp \
-	$(ROLES_DIR)/Governor.cpp
+OBJ = $(SRC:.cpp=.o)
 
-# Output
-EXEC = main
+# קובץ סופי
+TARGET = main
 
-# Targets
-all: $(EXEC)
+# ברירת מחדל
+all: $(TARGET)
 
-$(EXEC): $(MAIN) $(OBJS)
-	$(CXX) $(CXXFLAGS) $(MAIN) $(OBJS) -o $(EXEC)
+$(TARGET): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-run: $(EXEC)
-	./$(EXEC)
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-valgrind: $(EXEC)
-	valgrind ./$(EXEC)
+run: $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -f $(EXEC)
-
-.PHONY: all clean run valgrind
+	rm -f $(OBJ) $(TARGET)

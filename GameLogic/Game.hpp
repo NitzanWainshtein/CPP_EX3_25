@@ -17,6 +17,7 @@ namespace coup {
     public:
         Game();
 
+        bool nameExists(const std::string& name) const;
         void addPlayer(Player* player);
         std::vector<std::string> players() const;
         std::string turn() const;

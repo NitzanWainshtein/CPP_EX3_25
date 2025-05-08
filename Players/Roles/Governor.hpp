@@ -10,7 +10,7 @@ namespace coup {
         void tax() override;
         int taxAmount() const override;
         void undo(Player &player) override;
-        std::string roleName() const override;
+        std::string getRoleName() const override;
     };
 
 }
