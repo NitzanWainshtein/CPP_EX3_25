@@ -1,12 +1,12 @@
 
-#include "Player.hpp"
-#include "Governor.hpp"
-#include "Spy.hpp"
-#include "Baron.hpp"
-#include "General.hpp"
-#include "Judge.hpp"
-#include "Merchant.hpp"
-#include "Game.hpp"
+#include "Players/Player.hpp"
+#include "Players/Roles/Governor.hpp"
+#include "Players/Roles/Spy.hpp"
+#include "Players/Roles/Baron.hpp"
+#include "Players/Roles/General.hpp"
+#include "Players/Roles/Judge.hpp"
+#include "Players/Roles/Merchant.hpp"
+#include "GameLogic/Game.hpp"
 
 #include <exception>
 #include <iostream>
