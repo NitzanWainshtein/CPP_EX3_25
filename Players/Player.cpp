@@ -74,7 +74,7 @@ namespace coup {
     void Player::bribe() {
         if (game.turn() != name) throw std::runtime_error("Not your turn");
         if (coins < 4) throw std::runtime_error("Must have at least 4 coins to bribe");
-        BankManager::transferFromBank(game, *this, 4);
+        BankManager::transferToBank(*this, game, 4);
         lastAction = ActionType::Bribe;
         bribeUsedThisTurn = true;
     }

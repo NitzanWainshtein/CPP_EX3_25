@@ -2,10 +2,10 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
 
 # ספריות
-INCLUDES = -IPlayers -IGameLogic -IGUI
+INCLUDES = -IPlayers -IPlayers/Roles -IGameLogic -IGUI
 LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
-# קבצים
+# קבצי מקור
 SRC = main.cpp \
       GameLogic/Game.cpp \
       GameLogic/BankManager.cpp \
@@ -14,14 +14,16 @@ SRC = main.cpp \
       Players/Roles/Governor.cpp \
       Players/Roles/Baron.cpp \
       Players/Roles/Spy.cpp \
+      Players/Roles/Merchant.cpp \
       GUI/GUI.cpp
 
+# קבצי אובייקט
 OBJ = $(SRC:.cpp=.o)
 
-# קובץ סופי
+# קובץ פלט סופי
 TARGET = main
 
-# ברירת מחדל
+# קומפילציה ראשית
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
