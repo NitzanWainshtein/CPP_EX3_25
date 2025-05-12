@@ -11,18 +11,24 @@ namespace coup {
     void Governor::tax() {
         startTurn();
         if (sanctioned) throw std::runtime_error("Cannot tax, player is under sanctions");
-
-        BankManager::transferFromBank(game, *this, taxAmount());
+        game.setPendingAction(this, ActionType::Tax);
         lastAction = ActionType::Tax;
-
-        endTurn();
+        lastActionTarget = nullptr;
+        // do not call BankManager here — resolved in endTurn()
     }
 
     void Governor::undo(Player &player) {
+        if (!game.hasPendingAction()) {
+            throw std::runtime_error("No pending action to cancel");
+        }
+        if (&player != game.getLastActor()) {
+            throw std::runtime_error("Can only undo the last acting player's action");
+        }
         if (player.getLastAction() != ActionType::Tax) {
-            throw std::runtime_error("No tax action to cancel");
+            throw std::runtime_error("Only tax actions can be undone by Governor");
         }
         player.blockLastAction();
+        game.resolvePendingAction();
     }
 
     int Governor::taxAmount() const {
@@ -33,4 +39,4 @@ namespace coup {
         return "Governor";
     }
 
-}
+} // namespace coup

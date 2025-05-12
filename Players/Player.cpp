@@ -1,10 +1,10 @@
 #include "Player.hpp"
 #include "../GameLogic/Game.hpp"
 #include <stdexcept>
-
 #include "../GameLogic/BankManager.hpp"
 
 namespace coup {
+
     Player::Player(Game &game, const std::string &name)
         : game(game), name(name), coins(0), sanctioned(false), arrested(false),
           lastAction(ActionType::None), lastActionTarget(nullptr), actionBlocked(false), arrestBlocked(false),
@@ -12,8 +12,7 @@ namespace coup {
         game.addPlayer(this);
     }
 
-    Player::~Player() {
-    }
+    Player::~Player() {}
 
     int Player::getCoins() const { return this->coins; }
     void Player::setCoins(int coins) { this->coins = coins; }
@@ -24,104 +23,151 @@ namespace coup {
     void Player::blockArrestNextTurn() { this->arrestBlocked = true; }
     int Player::taxAmount() const { return 2; }
 
-    void Player::startTurn() {
-        if (game.turn() != name) {
-            throw std::runtime_error("Not " + name + "'s turn");
-        }
+    void Player::requireTurn() const {
+        if (game.turn() != name) throw std::runtime_error("Not your turn");
+    }
 
+    void Player::requireAlive(const Player &target) const {
+        if (!game.isAlive(target)) throw std::runtime_error("Target player is not in the game");
+    }
+
+    void Player::startTurn() {
+        requireTurn();
         if (coins >= 10) {
             throw std::runtime_error("You must perform a coup!");
-        }
-
-        if (actionBlocked) {
-            if (lastAction == ActionType::Tax) {
-                BankManager::transferToBank(*this, game, taxAmount());
-            }
-            actionBlocked = false;
         }
 
         bribeUsedThisTurn = false;
         lastAction = ActionType::None;
         lastActionTarget = nullptr;
+        actionBlocked = false;
     }
 
     void Player::endTurn() {
-        if (bribeUsedThisTurn) {
-            bribeUsedThisTurn = false;
-            return;
+        if (game.hasPendingAction() && game.getLastActor() == this && !actionBlocked) {
+            switch (lastAction) {
+                case ActionType::Tax:
+                    BankManager::transferFromBank(game, *this, taxAmount());
+                    break;
+                case ActionType::Bribe:
+                    // Nothing to finalize – cost paid earlier
+                    break;
+                case ActionType::Arrest:
+                    if (lastActionTarget) {
+                        if (lastActionTarget->getRoleName() == "Merchant") {
+                            BankManager::transferToBank(*lastActionTarget, game, 2);
+                        } else {
+                            BankManager::transferCoins(*lastActionTarget, *this, 1);
+                        }
+                        lastActionTarget->arrested = true;
+                    }
+                    break;
+                case ActionType::Sanction: {
+                    int cost = (lastActionTarget && lastActionTarget->getRoleName() == "Judge") ? 4 : 3;
+                    if (coins < cost) break;
+                    BankManager::transferToBank(*this, game, cost);
+                    if (lastActionTarget) {
+                        lastActionTarget->sanctioned = true;
+                        if (lastActionTarget->getRoleName() == "Baron") {
+                            BankManager::transferFromBank(game, *lastActionTarget, 1);
+                        }
+                    }
+                    break;
+                }
+                case ActionType::Coup:
+                    if (coins < 7) break;
+                    BankManager::transferToBank(*this, game, 7);
+                    if (lastActionTarget) {
+                        game.eliminate(*lastActionTarget);
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
 
+        game.resolvePendingAction();
         sanctioned = false;
         arrested = false;
         arrestBlocked = false;
+        bribeUsedThisTurn = false;
         game.nextTurn();
     }
 
     void Player::gather() {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
+        requireTurn();
         if (sanctioned) throw std::runtime_error("Cannot gather, player is under sanctions");
         BankManager::transferFromBank(game, *this, 1);
         lastAction = ActionType::Gather;
+        game.resolvePendingAction();
+        game.nextTurn();
     }
 
     void Player::tax() {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
+        requireTurn();
         if (sanctioned) throw std::runtime_error("Cannot tax, player is under sanctions");
-        BankManager::transferFromBank(game, *this, taxAmount());
+        game.setPendingAction(this, ActionType::Tax);
         lastAction = ActionType::Tax;
+        lastActionTarget = nullptr;
     }
 
     void Player::bribe() {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
-        if (coins < 4) throw std::runtime_error("Must have at least 4 coins to bribe");
+        requireTurn();
+        if (coins < 4) throw std::runtime_error("Need 4 coins for bribe");
         BankManager::transferToBank(*this, game, 4);
+        game.requestImmediateResponse(this, ActionType::Bribe, nullptr);
+        if (actionBlocked) return;
         lastAction = ActionType::Bribe;
         bribeUsedThisTurn = true;
     }
 
     void Player::arrest(Player &player) {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
-        if (this->arrestBlocked) {
-            throw std::runtime_error("You are blocked from using arrest this turn");
-        }
+        requireTurn();
+        requireAlive(player);
+        if (this->arrestBlocked) throw std::runtime_error("You are blocked from using arrest this turn");
         if (player.name == name) throw std::runtime_error("Cannot arrest yourself");
         if (player.arrested) throw std::runtime_error("Player was arrested last turn");
-        if (player.coins == 0 || (player.getRoleName() == "Merchant" && player.coins < 2)) throw std::runtime_error("Player doesn't have enough coins to be arrested");
-        if (player.getRoleName() == "Merchant") {
-            BankManager::transferToBank(player, game, 2);
-        } else {
-            BankManager::transferCoins(player, *this, 1);
+        if (player.coins == 0 || (player.getRoleName() == "Merchant" && player.coins < 2)) {
+            throw std::runtime_error("Player doesn't have enough coins to be arrested");
         }
-        player.arrested = true;
+
+        game.setPendingAction(this, ActionType::Arrest, &player);
         lastAction = ActionType::Arrest;
         lastActionTarget = &player;
     }
 
     void Player::sanction(Player &player) {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
+        requireTurn();
+        requireAlive(player);
         if (player.name == name) throw std::runtime_error("Cannot sanction yourself");
         if (player.isSanctioned()) throw std::runtime_error("Player already sanctioned");
-        if (coins < 3) throw std::runtime_error("Not enough coins to sanction");
-        BankManager::transferToBank(*this, game, 3);
-        player.sanctioned = true;
-        if (player.getRoleName() == "Baron") {
-            BankManager::transferFromBank(game, player, 1);
-        }
+        if (coins < 3 && player.getRoleName() != "Judge") throw std::runtime_error("Not enough coins to sanction");
+        if (coins < 4 && player.getRoleName() == "Judge") throw std::runtime_error("Not enough coins to sanction Judge");
+
+        game.setPendingAction(this, ActionType::Sanction, &player);
         lastAction = ActionType::Sanction;
         lastActionTarget = &player;
     }
 
-    void Player::coup(Player &player) {
-        if (game.turn() != name) throw std::runtime_error("Not your turn");
+    void Player::coup(Player& player) {
+        requireTurn();
+        requireAlive(player);
         if (player.name == name) throw std::runtime_error("Cannot coup yourself");
         if (coins < 7) throw std::runtime_error("Not enough coins to coup");
+
         BankManager::transferToBank(*this, game, 7);
+        game.requestImmediateResponse(this, ActionType::Coup, &player);  // ← NEW
+
+        if (actionBlocked) return;
+
         game.eliminate(player);
         lastAction = ActionType::Coup;
         lastActionTarget = &player;
     }
 
+
     void Player::undo(Player & /*player*/) {
-        // to be implemented by specific roles
+        // For specific roles only
     }
-} // namespace coup
+
+}

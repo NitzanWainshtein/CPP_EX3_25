@@ -1,9 +1,12 @@
 #include "Game.hpp"
 #include "../Players/Player.hpp"
 #include <stdexcept>
+#include <iostream>
 
 namespace coup {
-    Game::Game() : current_turn_index(0), bank(200) {
+    Game::Game()
+        : current_turn_index(0), bank(200), lastActingPlayer(nullptr), lastActionTarget(nullptr),
+          lastActionType(ActionType::None), actionPending(false) {
     }
 
     bool Game::nameExists(const std::string &name) const {
@@ -14,7 +17,6 @@ namespace coup {
         }
         return false;
     }
-
 
     void Game::addPlayer(Player *player) {
         for (const auto &existing: player_list) {
@@ -42,15 +44,17 @@ namespace coup {
 
     void Game::nextTurn() {
         if (isGameOver()) return;
+        size_t start = current_turn_index;
         do {
             current_turn_index = (current_turn_index + 1) % player_list.size();
-        } while (player_list[current_turn_index] == nullptr);
+        } while (player_list[current_turn_index] == nullptr && current_turn_index != start);
     }
 
     void Game::eliminate(Player &player) {
         for (size_t i = 0; i < player_list.size(); ++i) {
             if (player_list[i] == &player) {
                 player_list[i] = nullptr;
+                std::cout << "[INFO] " << player.getName() << " has been eliminated." << std::endl;
                 return;
             }
         }
@@ -79,6 +83,13 @@ namespace coup {
         return count == 1;
     }
 
+    bool Game::isAlive(const Player &player) const {
+        for (const Player *p: player_list) {
+            if (p == &player) return true;
+        }
+        return false;
+    }
+
     std::string Game::winner() const {
         if (!isGameOver()) throw std::runtime_error("Game is not over yet");
         for (const Player *p: player_list) {
@@ -88,7 +99,62 @@ namespace coup {
     }
 
     void Game::resetPlayers() {
+        for (Player *p: player_list) {
+            delete p;
+        }
         player_list.clear();
         current_turn_index = 0;
+    }
+
+    void Game::setPendingAction(Player *actor, ActionType action, Player *target) {
+        lastActingPlayer = actor;
+        lastActionType = action;
+        lastActionTarget = target;
+        actionPending = true;
+    }
+
+    void Game::resolvePendingAction() {
+        lastActingPlayer = nullptr;
+        lastActionType = ActionType::None;
+        lastActionTarget = nullptr;
+        actionPending = false;
+    }
+
+    bool Game::hasPendingAction() const {
+        return actionPending;
+    }
+
+    Player *Game::getLastActor() const {
+        return lastActingPlayer;
+    }
+
+    ActionType Game::getLastActionType() const {
+        return lastActionType;
+    }
+
+    Player *Game::getLastTarget() const {
+        return lastActionTarget;
+    }
+
+    void Game::requestImmediateResponse(Player *actor, ActionType action, Player *target) {
+        for (Player *p: player_list) {
+            if (p == actor || !isAlive(*p)) continue;
+
+            if (action == ActionType::Bribe && p->getRoleName() == "Judge") {
+                auto *judge = dynamic_cast<Judge *>(p);
+                if (judge && judge->tryBlockBribe(*actor)) {
+                    actor->blockLastAction();
+                    return;
+                }
+            }
+
+            if (action == ActionType::Coup && p->getRoleName() == "General") {
+                auto *general = dynamic_cast<General *>(p);
+                if (general && general->tryBlockCoup(*actor, *target)) {
+                    actor->blockLastAction();
+                    return;
+                }
+            }
+        }
     }
 } // namespace coup

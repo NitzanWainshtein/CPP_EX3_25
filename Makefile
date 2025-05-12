@@ -1,11 +1,10 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
 
-# ספריות
-INCLUDES = -IPlayers -IPlayers/Roles -IGameLogic -IGUI
-LIBS = -lsfml-graphics -lsfml-window -lsfml-system
+# Include paths
+INCLUDES = -IPlayers -IPlayers/Roles -IGameLogic
 
-# קבצי מקור
+# Source files (excluding GUI)
 SRC = main.cpp \
       GameLogic/Game.cpp \
       GameLogic/BankManager.cpp \
@@ -14,26 +13,33 @@ SRC = main.cpp \
       Players/Roles/Governor.cpp \
       Players/Roles/Baron.cpp \
       Players/Roles/Spy.cpp \
-      Players/Roles/Merchant.cpp \
-      GUI/GUI.cpp
+      Players/Roles/Merchant.cpp
 
-# קבצי אובייקט
+# Object files
 OBJ = $(SRC:.cpp=.o)
 
-# קובץ פלט סופי
-TARGET = main
+# Final binary
+TARGET = sim
 
-# קומפילציה ראשית
+# Default build target
 all: $(TARGET)
 
+# Linking final binary
 $(TARGET): $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
+# Compiling object files
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+# Run executable
 run: $(TARGET)
 	./$(TARGET)
 
+# Run with Valgrind
+valgrind: $(TARGET)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+
+# Clean build artifacts
 clean:
 	rm -f $(OBJ) $(TARGET)

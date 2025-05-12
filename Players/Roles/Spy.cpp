@@ -17,7 +17,7 @@ namespace coup {
         target.blockArrestNextTurn();
     }
 
-    std::string Spy::getRoleName() const {
+    std::string Spy::getRoleName() const{
         return "Spy";
     }
 }

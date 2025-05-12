@@ -1,21 +1,10 @@
 #pragma once
 
 #include <string>
-#include "../GameLogic/Game.hpp"
 
 namespace coup {
-    class Game;
-
-    enum class ActionType {
-        None,
-        Tax,
-        Bribe,
-        Coup,
-        Sanction,
-        Arrest,
-        Gather,
-        Invest
-    };
+    class Game;               // forward declaration
+    enum class ActionType;    // forward declaration
 
     class Player {
     protected:
@@ -31,39 +20,31 @@ namespace coup {
         bool bribeUsedThisTurn;
         bool arrestBlocked;
 
+        void requireTurn() const;
+        void requireAlive(const Player &target) const;
+
     public:
         Player(Game &game, const std::string &name);
-
         virtual ~Player();
 
         std::string getName() const;
-
         int getCoins() const;
-
         bool isSanctioned() const;
-
         ActionType getLastAction() const;
 
         void blockLastAction();
-
         void blockArrestNextTurn();
-
         void setCoins(int coins);
 
         virtual void startTurn();
 
+        // Actions
         void gather();
-
         virtual void tax();
-
         virtual int taxAmount() const;
-
         virtual void bribe();
-
         virtual void arrest(Player &player);
-
         virtual void sanction(Player &player);
-
         virtual void coup(Player &player);
 
         virtual void undo(Player &player);

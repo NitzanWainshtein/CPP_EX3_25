@@ -2,17 +2,34 @@
 
 #include <string>
 #include <vector>
-#include "Player.hpp"
+#include "../Players/Player.hpp"
 
 namespace coup {
 
-    class Player; // forward declaration
+    class Player;
+
+    enum class ActionType {
+        None,
+        Tax,
+        Bribe,
+        Coup,
+        Sanction,
+        Arrest,
+        Gather,
+        Invest
+    };
 
     class Game {
     private:
         std::vector<Player*> player_list;
         int current_turn_index;
         int bank;
+
+        // Pending action tracking
+        Player* lastActingPlayer;
+        Player* lastActionTarget;
+        ActionType lastActionType;
+        bool actionPending;
 
     public:
         Game();
@@ -28,9 +45,19 @@ namespace coup {
         void addToBank(int amount);
         void takeFromBank(int amount);
 
-        // NEW METHODS
         bool isGameOver() const;
+        bool isAlive(const Player& player) const;
         std::string winner() const;
+
+        // Pending action logic
+        void setPendingAction(Player* actor, ActionType action, Player* target = nullptr);
+        void resolvePendingAction();
+        bool hasPendingAction() const;
+        Player* getLastActor() const;
+        ActionType getLastActionType() const;
+        Player* getLastTarget() const;
+
+        void requestImmediateResponse(Player *actor, ActionType action, Player *target);
     };
 
-} // namespace coup
+}
