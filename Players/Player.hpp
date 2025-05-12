@@ -35,6 +35,7 @@ namespace coup {
         void blockLastAction();
         void blockArrestNextTurn();
         void setCoins(int coins);
+        void setSanctioned(bool value); // New function for testing
 
         virtual void startTurn();
 

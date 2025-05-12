@@ -14,7 +14,7 @@ namespace coup {
         game.setPendingAction(this, ActionType::Tax);
         lastAction = ActionType::Tax;
         lastActionTarget = nullptr;
-        // do not call BankManager here — resolved in endTurn()
+        endTurn(); // Added endTurn call to finish action
     }
 
     void Governor::undo(Player &player) {
