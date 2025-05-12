@@ -1,171 +1,142 @@
-#include "Game.hpp"
-#include "Player.hpp"
+#include "GameLogic/Game.hpp"
+#include "Players/Player.hpp"
 #include "Players/Roles/Governor.hpp"
 #include "Players/Roles/Spy.hpp"
 #include "Players/Roles/Baron.hpp"
 #include "Players/Roles/Merchant.hpp"
+#include "Players/Roles/General.hpp"
+#include "Players/Roles/Judge.hpp"
+
 #include <iostream>
 #include <vector>
-#include <unordered_map>
+#include <string>
+#include <functional>
+#include <stdexcept>
 
 using namespace coup;
 using namespace std;
 
-Player* findValidTarget(const Game& game, Player* self, const vector<Player*>& allPlayers) {
-    for (Player* p : allPlayers) {
-        if (p != self && game.isAlive(*p)) {
-            return p;
-        }
-    }
-    return nullptr;
-}
-
-void printStatus(const Game& game, const vector<Player*>& players) {
-    cout << "\n[STATUS] Players still in game:" << endl;
-    for (Player* p : players) {
-        if (game.isAlive(*p)) {
-            cout << " - " << p->getName() << " (" << p->getRoleName() << ") : " << p->getCoins() << " coins" << endl;
+void status(const Game &game, const vector<Player *> &players) {
+    cout << "\n[STATUS]" << endl;
+    for (auto *p : players) {
+        if (!p) continue;
+        try {
+            if (game.isAlive(*p)) {
+                cout << " - " << p->getName() << " (" << p->getRoleName() << ") : " << p->getCoins() << " coins" << endl;
+            }
+        } catch (...) {
+            cout << " - [DEAD PLAYER OR INVALID PTR]" << endl;
         }
     }
     cout << endl;
 }
 
+void gatherUntil(Player &p, Game &game, int targetCoins) {
+    while (p.getCoins() < targetCoins && game.isAlive(p)) {
+        while (game.turn() != p.getName()) game.nextTurn();
+        p.gather();
+    }
+}
+
+void forceTurn(Game &game, Player &p, function<void()> action) {
+    while (game.turn() != p.getName()) game.nextTurn();
+    try {
+        action();
+    } catch (const exception &e) {
+        cout << "[Exception] " << e.what() << endl;
+    }
+    if (game.turn() == p.getName()) {
+        try {
+            p.endTurn();
+        } catch (const exception &e) {
+            cout << "[EndTurn Exception] " << e.what() << endl;
+        }
+    }
+}
+
 int main() {
     Game game;
 
-    Governor gov(game, "Alice");
+    Governor governor(game, "Alice");
     Spy spy(game, "Bob");
     Baron baron(game, "Charlie");
     Merchant merchant(game, "Diana");
+    General general(game, "Ethan");
+    Judge judge(game, "Fiona");
 
-    vector<Player*> allPlayers = {&gov, &spy, &baron, &merchant};
-    unordered_map<string, int> playerTurnCount;
+    vector<Player *> players = {&governor, &spy, &baron, &merchant, &general, &judge};
 
-    for (Player* p : allPlayers) {
-        playerTurnCount[p->getName()] = 0;
-    }
+    cout << "=== Starting Full Simulation ===\n" << endl;
 
-    cout << "\n=== Starting Full Game Test Simulation ===\n" << endl;
+    gatherUntil(governor, game, 3);
+    gatherUntil(spy, game, 4);
+    gatherUntil(baron, game, 3);
+    gatherUntil(merchant, game, 3);
+    gatherUntil(general, game, 7);
+    gatherUntil(judge, game, 4);
 
-    while (!game.isGameOver()) {
-        string currentName = game.turn();
-        Player* current = nullptr;
-        for (Player* p : allPlayers) {
-            if (p->getName() == currentName) {
-                current = p;
-                break;
-            }
+    status(game, players);
+
+    forceTurn(game, governor, [&]() { governor.tax(); });
+    forceTurn(game, spy, [&]() { spy.bribe(); });
+    forceTurn(game, spy, [&]() {
+        if (game.isAlive(baron)) {
+            cout << "[INFO] Spy peeks Baron: " << spy.peekCoins(baron) << " coins." << endl;
+            spy.blockNextArrest(baron);
         }
-        if (!current) {
-            cout << "[BUG] Could not match current turn player to any known pointer." << endl;
-            break;
-        }
-
-        bool extraTurn = false;
-
-        do {
-            cout << "\n[TURN] " << currentName << " (" << current->getRoleName() << ") begins" << endl;
-
+    });
+    forceTurn(game, baron, [&]() {
+        if (game.isAlive(spy)) {
             try {
-                current->startTurn();
-
-                if (!extraTurn) playerTurnCount[currentName]++;
-                int turnNum = playerTurnCount[currentName];
-
-                if (game.hasPendingAction()) {
-                    if (current->getRoleName() == "Governor") {
-                        Player* actor = game.getLastActor();
-                        if (actor && actor->getLastAction() == ActionType::Tax) {
-                            cout << "[ACTION] Governor attempts to undo " << actor->getName() << "'s tax." << endl;
-                            current->undo(*actor);
-                        }
-                    }
-                }
-
-                Player* target = findValidTarget(game, current, allPlayers);
-
-                if (current->getCoins() >= 10) {
-                    if (target) {
-                        cout << "[ACTION] " << current->getName() << " performs COUP on " << target->getName() << endl;
-                        current->coup(*target);
-                    } else {
-                        cout << "[BUG] " << current->getName() << " must coup but no valid targets available!" << endl;
-                    }
-                } else if (current->getName() == "Alice") { // Governor
-                    cout << "[ACTION] Alice uses TAX." << endl;
-                    current->tax();
-                } else if (current->getName() == "Bob") { // Spy
-                    if (turnNum == 2 && game.isAlive(baron)) {
-                        cout << "[ACTION] Spy blocks Baron's next arrest." << endl;
-                        spy.blockNextArrest(baron);
-                    } else if (turnNum == 3 && game.isAlive(baron)) {
-                        cout << "[ACTION] Spy peeks Baron: " << spy.peekCoins(baron) << " coins." << endl;
-                    } else if (current->getCoins() >= 4) {
-                        cout << "[ACTION] Spy uses BRIBE." << endl;
-                        current->bribe();
-                        extraTurn = true;
-                        continue; // חוזר לתור נוסף מיד
-                    } else {
-                        cout << "[ACTION] Spy gathers coins." << endl;
-                        current->gather();
-                    }
-                } else if (current->getName() == "Charlie") { // Baron
-                    if (turnNum == 4 && game.isAlive(merchant) && merchant.getCoins() > 0) {
-                        cout << "[ACTION] Baron attempts to ARREST Merchant." << endl;
-                        try {
-                            baron.arrest(merchant);
-                        } catch (const exception& e) {
-                            cout << "[EXPECTED ERROR] Baron arrest failed: " << e.what() << endl;
-                            baron.gather();
-                        }
-                    } else if (turnNum == 5 && game.isAlive(merchant)) {
-                        cout << "[ACTION] Baron attempts to ARREST Merchant again." << endl;
-                        baron.arrest(merchant); // arrest נוסף שמצליח
-                    } else if (current->getCoins() >= 3) {
-                        cout << "[ACTION] Baron invests (3 coins → 6 coins)." << endl;
-                        baron.invest();
-                    } else {
-                        cout << "[ACTION] Baron gathers coins." << endl;
-                        current->gather();
-                    }
-                } else if (current->getName() == "Diana") { // Merchant
-                    if (turnNum == 2 && game.isAlive(baron)) {
-                        if (current->getCoins() >= 3) {
-                            cout << "[ACTION] Merchant sanctions Baron." << endl;
-                            current->sanction(baron);
-                        } else {
-                            cout << "[ACTION] Merchant can't sanction (not enough coins). Gathering instead." << endl;
-                            current->gather();
-                        }
-                    } else {
-                        cout << "[ACTION] Merchant gathers coins." << endl;
-                        current->gather();
-                    }
-                } else {
-                    cout << "[BUG] Unknown player encountered." << endl;
-                }
-
-                extraTurn = false;
-                current->endTurn();
-                printStatus(game, allPlayers);
-
-            } catch (const exception& e) {
-                cout << "[ERROR] Exception in turn for " << currentName << ": " << e.what() << endl;
-                try {
-                    current->endTurn();
-                } catch (...) {
-                    cout << "[BUG] Failed to end turn after error." << endl;
-                }
-                break;
+                baron.arrest(spy);
+            } catch (const exception &e) {
+                cout << "[Expected Arrest Blocked] " << e.what() << endl;
             }
-        } while (extraTurn);
-    }
+        }
+        baron.invest();
+    });
+    forceTurn(game, merchant, [&]() {
+        if (game.isAlive(baron)) merchant.sanction(baron);
+    });
+    forceTurn(game, general, [&]() {
+        if (game.isAlive(baron)) general.coup(baron);
+    });
 
-    cout << "\n=== Game Over ===\n" << endl;
+    gatherUntil(spy, game, 4);
+    forceTurn(game, spy, [&]() { spy.bribe(); });
+    forceTurn(game, judge, [&]() {
+        if (game.isAlive(spy)) judge.tryBlockBribe(spy);
+    });
+
+    status(game, players);
+
+    gatherUntil(governor, game, 7);
+    forceTurn(game, governor, [&]() {
+        if (game.isAlive(spy)) governor.coup(spy);
+    });
+
+    gatherUntil(merchant, game, 7);
+    forceTurn(game, merchant, [&]() {
+        if (game.isAlive(judge)) merchant.coup(judge);
+    });
+
+    gatherUntil(general, game, 7);
+    forceTurn(game, general, [&]() {
+        if (game.isAlive(governor)) general.coup(governor);
+    });
+
+    gatherUntil(merchant, game, 7);
+    forceTurn(game, merchant, [&]() {
+        if (game.isAlive(general)) merchant.coup(general);
+    });
+
+    status(game, players);
+
+    cout << "=== Game Over ===\n";
     try {
         cout << "Winner: " << game.winner() << endl;
-    } catch (const exception& e) {
-        cout << "[BUG] Could not determine winner: " << e.what() << endl;
+    } catch (const exception &e) {
+        cout << "[ERROR] Could not determine winner: " << e.what() << endl;
     }
 
     return 0;

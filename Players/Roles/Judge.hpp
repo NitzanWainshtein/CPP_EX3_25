@@ -5,13 +5,15 @@
 namespace coup {
     class Judge : public Player {
     public:
-        Judge(Game& game, const std::string& name);
+        Judge(Game &game, const std::string &name);
+
         std::string getRoleName() const override;
 
-        virtual bool shouldBlockBribe(Player& attacker);
-        bool tryBlockBribe(Player& attacker) override;
-    };
+        virtual bool shouldBlockBribe(Player &attacker);
 
-        void undo(Player& player) override {}
+        bool tryBlockBribe(Player &attacker);
+
+        void undo(Player &player) override {
+        }
     };
-}
+};

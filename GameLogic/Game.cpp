@@ -1,5 +1,7 @@
 #include "Game.hpp"
 #include "../Players/Player.hpp"
+#include "../Players/Roles/Judge.hpp"
+#include "../Players/Roles/General.hpp"
 #include <stdexcept>
 #include <iostream>
 

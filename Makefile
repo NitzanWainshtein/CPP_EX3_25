@@ -1,34 +1,30 @@
+# Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
 
 # Include paths
 INCLUDES = -IPlayers -IPlayers/Roles -IGameLogic
 
-# Source files (excluding GUI)
+# Source files
 SRC = main.cpp \
-      GameLogic/Game.cpp \
-      GameLogic/BankManager.cpp \
-      GameLogic/PlayerFactory.cpp \
-      Players/Player.cpp \
-      Players/Roles/Governor.cpp \
-      Players/Roles/Baron.cpp \
-      Players/Roles/Spy.cpp \
-      Players/Roles/Merchant.cpp
+      $(wildcard GameLogic/*.cpp) \
+      $(wildcard Players/*.cpp) \
+      $(wildcard Players/Roles/*.cpp)
 
 # Object files
 OBJ = $(SRC:.cpp=.o)
 
-# Final binary
+# Executable name
 TARGET = sim
 
-# Default build target
+# Default target
 all: $(TARGET)
 
-# Linking final binary
+# Linking
 $(TARGET): $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Compiling object files
+# Compile rule
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
