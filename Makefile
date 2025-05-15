@@ -1,41 +1,33 @@
-# Compiler and flags
+# Email: nitzanwa@gmail.com
+
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
+INCLUDES = -IGUI -IGameLogic -IPlayers -IPlayers/Roles
+LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
-# Include paths
-INCLUDES = -IPlayers -IPlayers/Roles -IGameLogic
-
-# Source files
-SRC = main.cpp \
-      $(wildcard GameLogic/*.cpp) \
-      $(wildcard Players/*.cpp) \
-      $(wildcard Players/Roles/*.cpp)
-
-# Object files
+SRC_DIRS = GUI GameLogic Players Players/Roles
+SRC = $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.cpp))
 OBJ = $(SRC:.cpp=.o)
 
-# Executable name
-TARGET = sim
+BIN = main
+TEST = test
 
-# Default target
-all: $(TARGET)
+all: $(BIN)
 
-# Linking
-$(TARGET): $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(BIN): $(OBJ) main.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-# Compile rule
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+main.o: main.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c main.cpp
 
-# Run executable
-run: $(TARGET)
-	./$(TARGET)
+test: $(OBJ) test.o
+	$(CXX) $(CXXFLAGS) -o $(TEST) $^ $(LIBS)
 
-# Run with Valgrind
-valgrind: $(TARGET)
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+test.o: test.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c test.cpp
 
-# Clean build artifacts
+valgrind: $(BIN)
+	valgrind --leak-check=full --track-origins=yes ./$(BIN)
+
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(BIN) $(TEST) *.o */*.o */*/*.o

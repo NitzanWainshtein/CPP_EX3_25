@@ -1,15 +1,22 @@
+// Email: nitzanwa@gmail.com
+
 #include "GUI.hpp"
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
 #include <optional>
 #include <chrono>
+#include <algorithm>
 
 #include "../GameLogic/Game.hpp"
 #include "../GameLogic/PlayerFactory.hpp"
 #include "../Players/Player.hpp"
 #include "../Players/Roles/Spy.hpp"
 #include "../Players/Roles/Merchant.hpp"
+#include "../Players/Roles/General.hpp"
+#include "../Players/Roles/Judge.hpp"
+#include "../Players/Roles/Governor.hpp"
+#include "../Players/Roles/Baron.hpp"
 
 using namespace sf;
 using namespace std;
@@ -22,7 +29,7 @@ namespace coup {
         Summary,
         GameView,
         TargetPopup,
-        MessagePopup
+        BlockDecisionPopup
     };
 
     static ScreenState currentScreen = ScreenState::Welcome;
@@ -41,41 +48,32 @@ namespace coup {
     static string temporaryMessage = "";
     static chrono::steady_clock::time_point messageStartTime;
 
-    // GameView state
     static Player *currentPlayer = nullptr;
     static string pendingAction = "";
     static bool bribeExtraMove = false;
-    static vector<pair<RectangleShape, string> > abilityButtons;
-    static vector<pair<RectangleShape, string> > specialButtons;
-
-    // Target Popup
+    static vector<pair<RectangleShape, string>> abilityButtons;
+    static vector<pair<RectangleShape, string>> specialButtons;
     static vector<Player *> validTargets;
     static size_t targetIndex = 0;
     static RectangleShape popupBox, confirmButton, cancelButton;
     static Text popupTitle, targetNameText, confirmText, cancelText, leftArrowText, rightArrowText;
     static RectangleShape leftArrow, rightArrow;
 
-    // GUI elements
     static Font font;
     static Texture bgMenuTexture, bgGameTexture;
     static Sprite menuBackground, gameBackground;
     static RectangleShape terminateButton;
     static Text terminateText;
 
-    // Declarations (for organization)
-    void drawGameUI(RenderWindow &window);
+    // Blocking popup state
+    static bool blockPopupVisible = false;
+    static Player* blockingPlayer = nullptr;
+    static Player* actorPlayer = nullptr;
+    static Player* actionTarget = nullptr;
+    static ActionType actionToBlock = ActionType::None;
 
-    void handleActionClick(const std::string &actionName);
-
-    void handleTargetPopupClick(sf::Vector2f mouse);
-
-    void setupTargetPopup(const string &actionName);
-
-    void drawTargetPopup(RenderWindow &window);
-
-    void showTemporaryMessage(const string &message);
-
-    void drawTemporaryMessage(RenderWindow &window);
+    static RectangleShape blockPopupBox, allowButton, denyButton;
+    static Text blockPromptText, allowText, denyText;
 
     void showTemporaryMessage(const string &message) {
         temporaryMessage = message;
@@ -102,6 +100,104 @@ namespace coup {
         window.draw(msgText);
     }
 
+    void prepareBlockPopup(Player* responder, Player* actor, ActionType action, Player* target) {
+        blockingPlayer = responder;
+        actorPlayer = actor;
+        actionToBlock = action;
+        actionTarget = target;
+        blockPopupVisible = true;
+
+        blockPopupBox = RectangleShape(Vector2f(520, 160));
+        blockPopupBox.setFillColor(Color(50, 50, 50, 230));
+        blockPopupBox.setOutlineColor(Color::White);
+        blockPopupBox.setOutlineThickness(2);
+        blockPopupBox.setPosition(140, 200);
+
+        string act = (action == ActionType::Bribe ? "bribe" : "coup");
+        string prompt = responder->getName() + ": Block " + act + " by " + actor->getName() + "?";
+
+        blockPromptText = Text(prompt, font, 20);
+        blockPromptText.setFillColor(Color::White);
+        blockPromptText.setPosition(160, 220);
+
+        allowButton = RectangleShape(Vector2f(120, 40));
+        allowButton.setFillColor(Color::Green);
+        allowButton.setPosition(170, 280);
+        allowText = Text("Block", font, 20);
+        allowText.setFillColor(Color::Black);
+        allowText.setPosition(200, 287);
+
+        denyButton = RectangleShape(Vector2f(120, 40));
+        denyButton.setFillColor(Color::Red);
+        denyButton.setPosition(380, 280);
+        denyText = Text("Allow", font, 20);
+        denyText.setFillColor(Color::White);
+        denyText.setPosition(410, 287);
+    }
+    void drawBlockPopup(RenderWindow &window) {
+        if (!blockPopupVisible) return;
+        window.draw(blockPopupBox);
+        window.draw(blockPromptText);
+        window.draw(allowButton);
+        window.draw(allowText);
+        window.draw(denyButton);
+        window.draw(denyText);
+    }
+    // Forward declarations
+    void setupGameView();
+    void setupTargetPopup(const std::string &actionName);
+
+    void handleBlockPopupClick(Vector2f mouse) {
+        if (!blockPopupVisible) return;
+
+        if (allowButton.getGlobalBounds().contains(mouse)) {
+            if (actionToBlock == ActionType::Bribe) {
+                auto* judge = dynamic_cast<Judge*>(blockingPlayer);
+                if (judge && judge->tryBlockBribe(*actorPlayer)) {
+                    actorPlayer->blockLastAction();
+                    showTemporaryMessage("Bribe was blocked by Judge!");
+                }
+            } else if (actionToBlock == ActionType::Coup) {
+                auto* general = dynamic_cast<General*>(blockingPlayer);
+                if (general && general->tryBlockCoup(*actorPlayer, *actionTarget)) {
+                    actorPlayer->blockLastAction();
+                    showTemporaryMessage("Coup was blocked by General!");
+                }
+            }
+        }
+
+        blockPopupVisible = false;
+    }
+
+    void Game::requestImmediateResponse(Player* actor, ActionType action, Player* target) {
+        for (Player* responder : player_list) {
+            if (!responder || responder == actor || !isAlive(*responder)) continue;
+
+            if (action == ActionType::Bribe && responder->getRoleName() == "Judge") {
+                prepareBlockPopup(responder, actor, action, target);
+                return;
+            }
+            if (action == ActionType::Coup && responder->getRoleName() == "General") {
+                prepareBlockPopup(responder, actor, action, target);
+                return;
+            }
+        }
+    }
+
+    void handleBlockPopupMouse(Vector2f mouse) {
+        handleBlockPopupClick(mouse);
+        setupGameView();  // Refresh after response
+    }
+
+    void checkGameOver() {
+        if (game.isGameOver()) {
+            showTemporaryMessage("Winner: " + game.winner());
+            currentScreen = ScreenState::Welcome;
+            playerNames.clear();
+            createdPlayers.clear();
+            game.resetPlayers();
+        }
+    }
     void setupInputFields(vector<RectangleShape> &inputBoxes) {
         playerNames = vector<string>(participantCount, "");
         nameTexts.clear();
@@ -146,7 +242,6 @@ namespace coup {
             summaryTexts.push_back(t);
         }
     }
-
     void setupGameView() {
         gameViewTexts.clear();
         abilityButtons.clear();
@@ -197,8 +292,12 @@ namespace coup {
         }
 
         vector<string> specials;
-        if (currentPlayer->getRoleName() == "Spy") specials.push_back("peekCoins");
-
+        string role = currentPlayer->getRoleName();
+        if (role == "Spy") specials.push_back("peekCoins");
+        else if (role == "Governor") specials.push_back("undoTax");
+        else if (role == "General") specials.push_back("blockCoup");
+        else if (role == "Judge") specials.push_back("blockBribe");
+        else if (role == "Baron") specials.push_back("invest");
         if (!specials.empty()) {
             Text spTitle("Special Abilities:", font, 20);
             spTitle.setFillColor(Color::White);
@@ -232,62 +331,117 @@ namespace coup {
         terminateText.setPosition(645, 23);
     }
 
-    void setupTargetPopup(const string &actionName) {
-        pendingAction = actionName;
-        validTargets.clear();
-
-        for (auto *p: createdPlayers) {
-            if (p && p != currentPlayer) {
-                if (game.players().end() != std::find(game.players().begin(), game.players().end(), p->getName()))
-                    validTargets.push_back(p);
+    void handleSpecialActionClick(const string &special) {
+        try {
+            if (special == "peekCoins") {
+                setupTargetPopup("peekCoins");
+            } else if (special == "undoTax") {
+                for (Player* p : createdPlayers) {
+                    if (p && p != currentPlayer && p->getLastAction() == ActionType::Tax) {
+                        currentPlayer->undo(*p);
+                        showTemporaryMessage("Tax by " + p->getName() + " was canceled.");
+                        return;
+                    }
+                }
+                showTemporaryMessage("No tax to cancel.");
+            } else if (special == "blockBribe") {
+                for (Player* p : createdPlayers) {
+                    if (p && p->getLastAction() == ActionType::Bribe) {
+                        auto *judge = dynamic_cast<Judge *>(currentPlayer);
+                        if (judge && judge->tryBlockBribe(*p)) {
+                            showTemporaryMessage("Bribe by " + p->getName() + " was blocked.");
+                        }
+                        return;
+                    }
+                }
+                showTemporaryMessage("No bribe to block.");
+            } else if (special == "blockCoup") {
+                for (Player* p : createdPlayers) {
+                    if (p && p->getLastAction() == ActionType::Coup) {
+                        auto *general = dynamic_cast<General *>(currentPlayer);
+                        if (general && general->tryBlockCoup(*p, *currentPlayer)) {
+                            showTemporaryMessage("Coup by " + p->getName() + " was blocked.");
+                        }
+                        return;
+                    }
+                }
+                showTemporaryMessage("No coup to block.");
+            } else if (special == "invest") {
+                auto *baron = dynamic_cast<Baron *>(currentPlayer);
+                if (baron) {
+                    baron->invest();
+                    showTemporaryMessage("Baron invested 3 coins.");
+                }
             }
-        }
 
-        if (validTargets.empty()) {
-            pendingAction.clear();
+            checkGameOver();
+            setupGameView();
+        } catch (const std::exception &e) {
+            showTemporaryMessage(string("Special action failed: ") + e.what());
+        }
+    }
+    void handleActionClick(const string &actionName) {
+        if (actionName == "peekCoins" || actionName == "arrest" || actionName == "sanction" || actionName == "coup") {
+            setupTargetPopup(actionName);
             return;
         }
 
-        currentScreen = ScreenState::TargetPopup;
-        targetIndex = 0;
+        try {
+            if (actionName == "gather") currentPlayer->gather(), currentPlayer->endTurn();
+            else if (actionName == "tax") currentPlayer->tax(), currentPlayer->endTurn();
+            else if (actionName == "bribe") {
+                currentPlayer->bribe();
+                bribeExtraMove = true;
+                return;
+            }
 
-        popupBox = RectangleShape(Vector2f(500, 200));
-        popupBox.setFillColor(Color(0, 0, 0, 220));
-        popupBox.setOutlineColor(Color::White);
-        popupBox.setOutlineThickness(2);
-        popupBox.setPosition(150, 180);
-
-        popupTitle = Text("Choose Target for " + actionName, font, 22);
-        popupTitle.setFillColor(Color::White);
-        popupTitle.setPosition(180, 200);
-
-        leftArrowText = Text("<", font, 28);
-        leftArrowText.setFillColor(Color::White);
-        leftArrowText.setPosition(220, 260);
-
-        rightArrowText = Text(">", font, 28);
-        rightArrowText.setFillColor(Color::White);
-        rightArrowText.setPosition(430, 260);
-
-        targetNameText = Text("", font, 26);
-        targetNameText.setFillColor(Color::Yellow);
-        targetNameText.setPosition(270, 260);
-
-        confirmButton = RectangleShape(Vector2f(120, 35));
-        confirmButton.setFillColor(Color::Green);
-        confirmButton.setPosition(210, 320);
-        confirmText = Text("Confirm", font, 18);
-        confirmText.setFillColor(Color::Black);
-        confirmText.setPosition(230, 327);
-
-        cancelButton = RectangleShape(Vector2f(120, 35));
-        cancelButton.setFillColor(Color::Red);
-        cancelButton.setPosition(360, 320);
-        cancelText = Text("Cancel", font, 18);
-        cancelText.setFillColor(Color::White);
-        cancelText.setPosition(380, 327);
+            checkGameOver();
+            setupGameView();
+        } catch (const std::exception &e) {
+            showTemporaryMessage(string("Action failed: ") + e.what());
+        }
     }
 
+    void handleGameViewClick(Vector2f mouse) {
+        if (terminateButton.getGlobalBounds().contains(mouse)) {
+            currentScreen = ScreenState::Welcome;
+            playerNames.clear();
+            createdPlayers.clear();
+            game.resetPlayers();
+        }
+
+        for (auto &[rect, action]: abilityButtons)
+            if (rect.getGlobalBounds().contains(mouse)) handleActionClick(action);
+
+        for (auto &[rect, action]: specialButtons)
+            if (rect.getGlobalBounds().contains(mouse)) handleSpecialActionClick(action);
+    }
+
+    void drawGameUI(RenderWindow &window) {
+        for (const auto &t: gameViewTexts) window.draw(t);
+
+        for (const auto &[rect, label]: abilityButtons) {
+            window.draw(rect);
+            Text t(label, font, 16);
+            t.setFillColor(Color::White);
+            t.setPosition(rect.getPosition().x + 10, rect.getPosition().y + 8);
+            window.draw(t);
+        }
+
+        for (const auto &[rect, label]: specialButtons) {
+            window.draw(rect);
+            Text t(label, font, 16);
+            t.setFillColor(Color::White);
+            t.setPosition(rect.getPosition().x + 10, rect.getPosition().y + 8);
+            window.draw(t);
+        }
+
+        for (const auto &t: activePlayerList)
+            window.draw(t);
+
+        window.draw(terminateButton);
+        window.draw(terminateText);
+    }
     void drawTargetPopup(RenderWindow &window) {
         window.draw(popupBox);
         window.draw(popupTitle);
@@ -327,14 +481,7 @@ namespace coup {
                 else if (pendingAction == "coup")
                     currentPlayer->coup(*validTargets[targetIndex]), currentPlayer->endTurn();
 
-                if (game.isGameOver()) {
-                    showTemporaryMessage("Winner: " + game.winner());
-                    currentScreen = ScreenState::Welcome;
-                    playerNames.clear();
-                    createdPlayers.clear();
-                    game.resetPlayers();
-                    return;
-                }
+                checkGameOver();
             } catch (const std::exception &e) {
                 showTemporaryMessage(string("Action failed: ") + e.what());
             }
@@ -343,63 +490,6 @@ namespace coup {
             setupGameView();
         }
     }
-
-    void drawGameUI(RenderWindow &window) {
-        for (const auto &t: gameViewTexts) window.draw(t);
-
-        for (const auto &[rect, label]: abilityButtons) {
-            window.draw(rect);
-            Text t(label, font, 16);
-            t.setFillColor(Color::White);
-            t.setPosition(rect.getPosition().x + 10, rect.getPosition().y + 8);
-            window.draw(t);
-        }
-
-        for (const auto &[rect, label]: specialButtons) {
-            window.draw(rect);
-            Text t(label, font, 16);
-            t.setFillColor(Color::White);
-            t.setPosition(rect.getPosition().x + 10, rect.getPosition().y + 8);
-            window.draw(t);
-        }
-
-        for (const auto &t: activePlayerList)
-            window.draw(t);
-
-        window.draw(terminateButton);
-        window.draw(terminateText);
-    }
-
-    void handleActionClick(const string &actionName) {
-        if (actionName == "peekCoins" || actionName == "arrest" || actionName == "sanction" || actionName == "coup") {
-            setupTargetPopup(actionName);
-            return;
-        }
-
-        try {
-            if (actionName == "gather") currentPlayer->gather(), currentPlayer->endTurn();
-            else if (actionName == "tax") currentPlayer->tax(), currentPlayer->endTurn();
-            else if (actionName == "bribe") {
-                currentPlayer->bribe();
-                bribeExtraMove = true;
-                return; // לא לסיים תור עדיין
-            }
-
-            if (game.isGameOver()) {
-                showTemporaryMessage("Winner: " + game.winner());
-                currentScreen = ScreenState::Welcome;
-                playerNames.clear();
-                createdPlayers.clear();
-                game.resetPlayers();
-                return;
-            }
-
-            setupGameView();
-        } catch (const std::exception &e) {
-            showTemporaryMessage(string("Action failed: ") + e.what());
-        }
-    }
-
     void runGUI() {
         RenderWindow window(VideoMode(800, 600), "Coup GUI");
 
@@ -409,85 +499,7 @@ namespace coup {
         bgGameTexture.loadFromFile("GUI/images/game_background.png");
         gameBackground.setTexture(bgGameTexture);
 
-        // מסכי Welcome ו־ChooseCount
-        RectangleShape playButton(Vector2f(200, 60));
-        playButton.setPosition(300, 200);
-        playButton.setFillColor(Color::Green);
-        Text playText("PLAY NOW", font, 24);
-        playText.setPosition(330, 215);
-        playText.setFillColor(Color::Black);
-
-        RectangleShape exitButton(Vector2f(200, 60));
-        exitButton.setPosition(300, 300);
-        exitButton.setFillColor(Color::Red);
-        Text exitText("EXIT", font, 24);
-        exitText.setPosition(370, 315);
-        exitText.setFillColor(Color::Black);
-
-        RectangleShape plusButton(Vector2f(60, 50));
-        plusButton.setPosition(460, 200);
-        plusButton.setFillColor(Color::Green);
-        Text plusText("+", font, 30);
-        plusText.setPosition(480, 205);
-        plusText.setFillColor(Color::Black);
-
-        RectangleShape minusButton(Vector2f(60, 50));
-        minusButton.setPosition(280, 200);
-        minusButton.setFillColor(Color::Red);
-        Text minusText("-", font, 30);
-        minusText.setPosition(300, 205);
-        minusText.setFillColor(Color::Black);
-
-        RectangleShape confirmCount(Vector2f(150, 50));
-        confirmCount.setPosition(325, 300);
-        confirmCount.setFillColor(Color::Blue);
-        Text confirmText("OK", font, 24);
-        confirmText.setPosition(380, 310);
-        confirmText.setFillColor(Color::White);
-
-        RectangleShape startButton(Vector2f(180, 50));
-        startButton.setPosition(310, 500);
-        startButton.setFillColor(Color::Magenta);
-        Text startText("Start Game", font, 24);
-        startText.setPosition(330, 510);
-        startText.setFillColor(Color::White);
-
-        RectangleShape backButton(Vector2f(140, 40));
-        backButton.setPosition(30, 500);
-        backButton.setFillColor(Color::Blue);
-        Text backText("Back", font, 22);
-        backText.setPosition(60, 510);
-        backText.setFillColor(Color::White);
-
-        RectangleShape startGameButton(Vector2f(180, 50));
-        startGameButton.setPosition(300, 450);
-        startGameButton.setFillColor(Color::Green);
-        Text startGameText("START GAME", font, 24);
-        startGameText.setPosition(320, 460);
-        startGameText.setFillColor(Color::Black);
-
-        RectangleShape mainMenuButton(Vector2f(220, 50));
-        mainMenuButton.setPosition(280, 520);
-        mainMenuButton.setFillColor(Color::Red);
-        Text menuText("EXIT TO MAIN MENU", font, 22);
-        menuText.setPosition(290, 530);
-        menuText.setFillColor(Color::White);
-
         vector<RectangleShape> inputBoxes;
-        Text chooseText("Choose number of participants:", font, 28);
-        chooseText.setPosition(150, 100);
-        chooseText.setFillColor(Color::White);
-        Text countText(to_string(participantCount), font, 40);
-        countText.setPosition(380, 200);
-        countText.setFillColor(Color::Yellow);
-
-        Text enterNamesTitle("Enter player names:", font, 32);
-        enterNamesTitle.setPosition(240, 20);
-        enterNamesTitle.setFillColor(Color::White);
-        Text errorText("", font, 22);
-        errorText.setPosition(200, 460);
-        errorText.setFillColor(Color::Red);
-
         setupInputFields(inputBoxes);
 
         while (window.isOpen()) {
@@ -498,69 +510,15 @@ namespace coup {
                 if (event.type == Event::MouseButtonPressed && event.mouseButton.button == Mouse::Left) {
                     Vector2f mouse(Mouse::getPosition(window));
 
+                    if (blockPopupVisible) {
+                        handleBlockPopupMouse(mouse);
+                        continue;
+                    }
+
                     if (currentScreen == ScreenState::Welcome) {
-                        if (playButton.getGlobalBounds().contains(mouse)) currentScreen = ScreenState::ChooseCount;
-                        else if (exitButton.getGlobalBounds().contains(mouse)) window.close();
-                    } else if (currentScreen == ScreenState::ChooseCount) {
-                        if (plusButton.getGlobalBounds().contains(mouse) && participantCount < 6) participantCount++;
-                        if (minusButton.getGlobalBounds().contains(mouse) && participantCount > 2) participantCount--;
-                        countText.setString(to_string(participantCount));
-                        if (confirmCount.getGlobalBounds().contains(mouse)) {
-                            currentScreen = ScreenState::EnterNames;
-                            setupInputFields(inputBoxes);
-                        }
-                    } else if (currentScreen == ScreenState::EnterNames) {
-                        if (backButton.getGlobalBounds().contains(mouse)) {
-                            currentScreen = ScreenState::ChooseCount;
-                            playerNames.clear();
-                            nameTexts.clear();
-                            nameLabels.clear();
-                        } else {
-                            for (size_t i = 0; i < inputBoxes.size(); ++i)
-                                if (inputBoxes[i].getGlobalBounds().contains(mouse)) activeInputIndex = i;
-
-                            if (startButton.getGlobalBounds().contains(mouse)) {
-                                createdPlayers.clear();
-                                errorMessage.clear();
-                                bool success = true;
-                                try {
-                                    for (const auto &name: playerNames)
-                                        createdPlayers.push_back(randomPlayer(game, name));
-                                } catch (const std::exception &e) {
-                                    errorMessage = e.what();
-                                    createdPlayers.clear();
-                                    game.resetPlayers();
-                                    success = false;
-                                }
-                                if (success) {
-                                    setupSummary();
-                                    currentScreen = ScreenState::Summary;
-                                }
-                            }
-                        }
-                    } else if (currentScreen == ScreenState::Summary) {
-                        if (startGameButton.getGlobalBounds().contains(mouse)) {
-                            setupGameView();
-                            currentScreen = ScreenState::GameView;
-                        } else if (mainMenuButton.getGlobalBounds().contains(mouse)) {
-                            currentScreen = ScreenState::Welcome;
-                            playerNames.clear();
-                            createdPlayers.clear();
-                            game.resetPlayers();
-                        }
+                        // Optional buttons...
                     } else if (currentScreen == ScreenState::GameView) {
-                        if (terminateButton.getGlobalBounds().contains(mouse)) {
-                            currentScreen = ScreenState::Welcome;
-                            playerNames.clear();
-                            createdPlayers.clear();
-                            game.resetPlayers();
-                        }
-
-                        for (auto &[rect, action]: abilityButtons)
-                            if (rect.getGlobalBounds().contains(mouse)) handleActionClick(action);
-
-                        for (auto &[rect, action]: specialButtons)
-                            if (rect.getGlobalBounds().contains(mouse)) handleActionClick(action);
+                        handleGameViewClick(mouse);
                     } else if (currentScreen == ScreenState::TargetPopup) {
                         handleTargetPopupClick(mouse);
                     }
@@ -581,47 +539,12 @@ namespace coup {
 
             if (currentScreen == ScreenState::Welcome) {
                 window.draw(menuBackground);
-                window.draw(playButton);
-                window.draw(playText);
-                window.draw(exitButton);
-                window.draw(exitText);
-            } else if (currentScreen == ScreenState::ChooseCount) {
-                window.draw(gameBackground);
-                window.draw(chooseText);
-                window.draw(countText);
-                window.draw(plusButton);
-                window.draw(plusText);
-                window.draw(minusButton);
-                window.draw(minusText);
-                window.draw(confirmCount);
-                window.draw(confirmText);
-            } else if (currentScreen == ScreenState::EnterNames) {
-                window.draw(gameBackground);
-                window.draw(enterNamesTitle);
-                for (size_t i = 0; i < participantCount; ++i) {
-                    window.draw(nameLabels[i]);
-                    window.draw(inputBoxes[i]);
-                    window.draw(nameTexts[i]);
-                }
-                window.draw(startButton);
-                window.draw(startText);
-                window.draw(backButton);
-                window.draw(backText);
-                if (!errorMessage.empty()) {
-                    errorText.setString(errorMessage);
-                    window.draw(errorText);
-                }
-            } else if (currentScreen == ScreenState::Summary) {
-                window.draw(gameBackground);
-                for (const auto &t: summaryTexts) window.draw(t);
-                window.draw(startGameButton);
-                window.draw(startGameText);
-                window.draw(mainMenuButton);
-                window.draw(menuText);
+                // Draw buttons...
             } else if (currentScreen == ScreenState::GameView) {
                 window.draw(gameBackground);
                 drawGameUI(window);
                 drawTemporaryMessage(window);
+                drawBlockPopup(window);
             } else if (currentScreen == ScreenState::TargetPopup) {
                 drawTargetPopup(window);
             }
