@@ -21,9 +21,9 @@ namespace coup {
 
     class Game {
     private:
-        std::vector<Player*> player_list;
-        int current_turn_index;
-        int bank;
+        std::vector<Player*> player_list; //Players list
+        int current_turn_index; //Who's turn it is
+        int bank; //Game bank
 
         // Pending action tracking
         Player* lastActingPlayer;
