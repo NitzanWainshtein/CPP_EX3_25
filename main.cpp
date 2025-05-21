@@ -90,8 +90,8 @@ bool dianaBribeDecision(const Player& player) {
     return false;
 }
 
-bool dianaBlockDecision(const Player& blocker, ActionType action, const Player* actor) {
-    return false;
+bool dianaBlockDecision(const Player&, ActionType, const Player*) {
+    return false; // Never blocks
 }
 
 // Eve (Merchant) - Moderate strategy
@@ -100,8 +100,8 @@ bool eveBribeDecision(const Player& player) {
     return player.getCoins() >= 7;
 }
 
-bool eveBlockDecision(const Player& blocker, ActionType action, const Player* actor) {
-    return false;
+bool eveBlockDecision(const Player&, ActionType, const Player*) {
+    return false; // Never blocks
 }
 
 // Frank (Spy) - Sneaky strategy
@@ -110,8 +110,8 @@ bool frankBribeDecision(const Player& player) {
     return player.getCoins() >= 6;
 }
 
-bool frankBlockDecision(const Player& blocker, ActionType action, const Player* actor) {
-    return false;
+bool frankBlockDecision(const Player&, ActionType, const Player*) {
+    return false; // Never blocks
 }
 
 // ==========================================
@@ -133,10 +133,10 @@ void printGameState(const Game& game) {
     cout << "=========================" << endl;
 }
 
-void printPlayerStats(const vector<Player*>& players) {
+void printPlayerStats(const vector<Player*>& players, const Game& game) {
     cout << "\n💰 --- PLAYER STATS --- 💰" << endl;
     for (Player* p : players) {
-        if (p != nullptr && p->getName() != "ELIMINATED") {
+        if (p != nullptr && game.isAlive(*p)) {
             cout << p->getName() << " (" << p->getRoleName() << "): "
                  << p->getCoins() << " coins";
             if (p->isSanctioned()) cout << " [SANCTIONED]";
@@ -211,7 +211,7 @@ int main() {
         frank.setCoins(2);
 
         printGameState(game);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n🎭 PHASE 1: BASIC ROLE ABILITIES" << endl;
         cout << "================================" << endl;
@@ -221,7 +221,7 @@ int main() {
         Player* current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->tax();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
         printGameState(game);
 
         // Turn 2: Bob (Judge) - Gather
@@ -229,28 +229,28 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 3: Charlie (General) - Gather
         cout << "\n3️⃣ Charlie (General) does GATHER..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 4: Diana (Baron) - INVEST!
         cout << "\n4️⃣ Diana (Baron) does INVEST (3->6 coins)..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         static_cast<Baron*>(current)->invest();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 5: Eve (Merchant) - Test merchant bonus
         cout << "\n5️⃣ Eve (Merchant) starts turn - should get bonus coin..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 6: Frank (Spy) - Use spy abilities
         cout << "\n6️⃣ Frank (Spy) uses special abilities..." << endl;
@@ -263,7 +263,7 @@ int main() {
         spy->blockNextArrest(charlie);
 
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n🚫 PHASE 2: BLOCKING MECHANISMS" << endl;
         cout << "===============================" << endl;
@@ -273,14 +273,14 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->tax();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 8: Bob tries tax - Alice should block!
         cout << "\n8️⃣ Bob tries TAX - Alice (Governor) should BLOCK..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->tax();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 9: Charlie tries to arrest Frank - should be blocked by Spy
         cout << "\n9️⃣ Charlie tries to ARREST Frank - should be blocked by Spy..." << endl;
@@ -292,7 +292,7 @@ int main() {
             cout << "   ✅ EXPECTED: " << e.what() << endl;
         }
         current->gather(); // Do different action instead
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n💰 PHASE 3: BRIBE MECHANISM & BLOCKING" << endl;
         cout << "=======================================" << endl;
@@ -312,7 +312,7 @@ int main() {
         } catch (const exception& e) {
             cout << "   ✅ CORRECT: " << e.what() << endl;
         }
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 11: Test proper bribe flow
         cout << "\n1️⃣1️⃣ Testing PROPER BRIBE FLOW - Eve will do gather, get asked about bribe, and we'll simulate 'YES'..." << endl;
@@ -320,8 +320,8 @@ int main() {
         current->setCoins(6);
         current->startTurn();
 
-        // Save original callback
-        auto originalCallback = eveBribeDecision;
+        // Save original callback (not used but keeping for potential future use)
+        // auto originalCallback = eveBribeDecision;
 
         // Temporarily change Eve's callback to say YES to bribe
         auto tempYesCallback = [](const Player& player) {
@@ -343,7 +343,7 @@ int main() {
 
         // Restore original callback
         current->setBribeDecisionCallback(eveBribeDecision);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n⚔️ PHASE 4: ARREST & COMPENSATION" << endl;
         cout << "=================================" << endl;
@@ -353,35 +353,35 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->arrest(charlie);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 13: Alice's turn
         cout << "\n1️⃣3️⃣ Alice gathers..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 14: Bob's turn
         cout << "\n1️⃣4️⃣ Bob gathers..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 15: Charlie starts turn - should get arrest compensation
         cout << "\n1️⃣5️⃣ Charlie (General) starts turn - should get ARREST COMPENSATION..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 16: Diana arrests Eve (Merchant) - test merchant special
         cout << "\n1️⃣6️⃣ Diana ARRESTS Eve (Merchant) - should pay 2 to bank..." << endl;
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->arrest(eve);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n🚨 PHASE 5: SANCTIONS & COMPENSATION" << endl;
         cout << "====================================" << endl;
@@ -391,7 +391,7 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 18: Frank sanctions Diana (Baron)
         cout << "\n1️⃣8️⃣ Frank SANCTIONS Diana (Baron) - Baron should get compensation..." << endl;
@@ -399,7 +399,7 @@ int main() {
         current->setCoins(5);
         current->startTurn();
         current->sanction(diana);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 19: Alice must coup - handle the 10 coin rule
         cout << "\n1️⃣9️⃣ Alice has 10 coins - MUST COUP! Choosing target..." << endl;
@@ -413,7 +413,7 @@ int main() {
             cout << "   💥 Alice is FORCED to COUP Frank..." << endl;
 
             // Enable Charlie's coup blocking for this test
-            auto charlieBlockCoupCallback = [](const Player& blocker, ActionType action, const Player* actor) {
+            auto charlieBlockCoupCallback = [](const Player& blocker, ActionType action, const Player*) {
                 if (action == ActionType::Coup && blocker.getRoleName() == "General" && blocker.getCoins() >= 5) {
                     cout << "    -> Charlie (General) considers blocking the coup..." << endl;
                     cout << "    -> Charlie decides to BLOCK the coup!" << endl;
@@ -426,7 +426,7 @@ int main() {
             // Alice coups Frank
             current->coup(frank);
         }
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
         printGameState(game);
 
         // Turn 20: Bob sanctions Judge (higher cost test)
@@ -434,7 +434,7 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 21: Charlie sanctions Bob (Judge) - costs 4 coins
         cout << "\n2️⃣1️⃣ Charlie SANCTIONS Bob (Judge) - should cost 4 coins..." << endl;
@@ -442,7 +442,7 @@ int main() {
         current->setCoins(6);
         current->startTurn();
         current->sanction(bob);
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         // Turn 22: Diana tries to gather while sanctioned
         cout << "\n2️⃣2️⃣ Diana tries to GATHER while SANCTIONED..." << endl;
@@ -454,7 +454,7 @@ int main() {
             cout << "   ✅ EXPECTED ERROR: " << e.what() << endl;
             current->endTurn(); // End turn without action
         }
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n⚡ PHASE 6: COUP & GENERAL BLOCKING" << endl;
         cout << "==================================" << endl;
@@ -464,50 +464,105 @@ int main() {
         current = getCurrentPlayer(game, allPlayers);
         current->startTurn();
         current->gather();
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
-        // Turn 24: Test Judge blocks bribe
+        // Turn 24: Test Judge blocks bribe - wait for Frank's turn
         cout << "\n2️⃣4️⃣ Testing JUDGE BLOCKS BRIBE..." << endl;
-        current = getCurrentPlayer(game, allPlayers);
 
-        // Give Frank enough coins for bribe
-        frank.setCoins(8);
-        current = &frank; // Make sure Frank is current
+        // Advance turns until it's Frank's turn or we find someone to test
+        bool judgeBlockTested = false;
+        for (int i = 0; i < 6 && !judgeBlockTested && !game.isGameOver(); i++) {
+            current = getCurrentPlayer(game, allPlayers);
+            cout << "   Current turn: " << current->getName() << endl;
 
-        cout << "   🎯 Frank will try gather + bribe, Bob (Judge) should block..." << endl;
-        current->startTurn();
+            if (current->getName() == "Frank") {
+                cout << "   🎯 Frank will try gather + bribe, Bob (Judge) should block..." << endl;
 
-        // Enable Frank's bribe attempt
-        auto frankBribeYesCallback = [](const Player& player) {
-            cout << "  [DECISION] " << player.getName() << " considering bribe (has " << player.getCoins() << " coins)" << endl;
-            cout << "  [DECISION] Frank decides: YES to bribe!" << endl;
-            return true;
-        };
-        current->setBribeDecisionCallback(frankBribeYesCallback);
+                // Give Frank enough coins for bribe
+                current->setCoins(8);
+                current->startTurn();
 
-        current->gather(); // This should ask about bribe
+                // Enable Frank's bribe attempt
+                cout << "   ⚠️ Setting temporary bribe callback for Frank..." << endl;
+                auto frankBribeYesCallback = [](const Player& player) -> bool {
+                    cout << "  [DECISION] " << player.getName() << " considering bribe (has " << player.getCoins() << " coins)" << endl;
+                    cout << "  [DECISION] Frank decides: YES to bribe!" << endl;
+                    return true;
+                };
 
-        // Now try to do the bribe - should be blocked by Bob (Judge)
-        if (current->canUseBribe()) {
-            cout << "   💵 Frank attempts BRIBE - Bob (Judge) should block..." << endl;
-            current->bribe();
-            if (current->getLastAction() == ActionType::Bribe) {
-                cout << "   ❌ ERROR: Bribe should have been blocked!" << endl;
+                // Use static cast to ensure we're modifying the right object
+                Spy* frankSpy = static_cast<Spy*>(current);
+                frankSpy->setBribeDecisionCallback(frankBribeYesCallback);
+
+                current->gather(); // This should ask about bribe
+
+                // Now try to do the bribe - should be blocked by Bob (Judge)
+                if (current->canUseBribe()) {
+                    cout << "   💵 Frank attempts BRIBE - Bob (Judge) should block..." << endl;
+                    try {
+                        current->bribe();
+                        cout << "   🔍 Checking if bribe succeeded..." << endl;
+                        if (current->getLastAction() == ActionType::Bribe) {
+                            cout << "   ❌ ERROR: Bribe should have been blocked!" << endl;
+                        } else {
+                            cout << "   ✅ SUCCESS: Bribe was blocked by Judge!" << endl;
+                        }
+                    } catch (const exception& e) {
+                        cout << "   ⚠️ Bribe attempt failed with exception: " << e.what() << endl;
+                    }
+                } else {
+                    cout << "   ⚠️ Frank cannot use bribe (conditions not met)" << endl;
+                }
+
+                // Restore Frank's original callback
+                frankSpy->setBribeDecisionCallback(frankBribeDecision);
+                judgeBlockTested = true;
+
             } else {
-                cout << "   ✅ SUCCESS: Bribe was blocked by Judge!" << endl;
+                // Not Frank's turn, just play normally but safely
+                try {
+                    current->startTurn();
+                    if (current->getCoins() >= 10) {
+                        // Must coup - find first available target
+                        bool coupDone = false;
+                        for (Player* target : allPlayers) {
+                            if (target != nullptr && target != current && game.isAlive(*target)) {
+                                try {
+                                    current->coup(*target);
+                                    coupDone = true;
+                                    break;
+                                } catch (const exception& e) {
+                                    cout << "   Coup failed: " << e.what() << endl;
+                                }
+                            }
+                        }
+                        if (!coupDone) {
+                            current->gather(); // Fallback
+                        }
+                    } else {
+                        current->gather();
+                    }
+                } catch (const exception& e) {
+                    cout << "   Turn failed: " << e.what() << endl;
+                    if (current) current->endTurn();
+                }
             }
         }
 
-        // Restore Frank's callback
-        current->setBribeDecisionCallback(frankBribeDecision);
-        printPlayerStats(allPlayers);
+        if (!judgeBlockTested) {
+            cout << "   ⚠️ Couldn't test Judge block in this game flow, but mechanism exists!" << endl;
+        }
+
+        if (!game.isGameOver()) {
+            printPlayerStats(allPlayers, game);
+        }
 
         // Turn 25: Alice must coup - test General blocking
         cout << "\n2️⃣5️⃣ Alice has 10 coins - MUST COUP - Charlie (General) may block..." << endl;
         current = getCurrentPlayer(game, allPlayers);
 
         // Temporarily enable Charlie's coup blocking
-        auto charlieBlockYesCallback = [](const Player& blocker, ActionType action, const Player* actor) {
+        auto charlieBlockYesCallback = [](const Player& blocker, ActionType action, const Player*) {
             if (action == ActionType::Coup && blocker.getRoleName() == "General" && blocker.getCoins() >= 5) {
                 cout << "    -> Charlie (General) decides to BLOCK the coup!" << endl;
                 return true;
@@ -523,46 +578,68 @@ int main() {
             cout << "   💥 Alice COUPS Frank - Charlie may block..." << endl;
             current->coup(frank);
         }
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
         printGameState(game);
 
         cout << "\n🎯 PHASE 7: GOVERNOR UNDO TEST" << endl;
         cout << "==============================" << endl;
 
-        // Test Governor undo mechanism
-        cout << "\n2️⃣5️⃣ Testing Governor UNDO mechanism..." << endl;
-
-        // First, let's have Alice try to do a tax
-        current = getCurrentPlayer(game, allPlayers);
-        if (current->getName() != "Alice") {
-            // Skip turns until it's Alice's turn or someone does tax
-            for (int i = 0; i < 6 && current->getName() != "Alice"; i++) {
-                current->startTurn();
-                current->gather();
-                current = getCurrentPlayer(game, allPlayers);
-            }
-        }
-
         if (!game.isGameOver()) {
-            cout << "   🎯 " << current->getName() << " will do TAX, then Alice will try UNDO..." << endl;
-            current->startTurn();
-            current->tax();
+            cout << "\n2️⃣5️⃣ Testing Governor UNDO mechanism..." << endl;
 
-            // Now Alice tries to undo it
-            try {
-                cout << "   🔄 Alice attempts to UNDO the tax..." << endl;
-                alice.undo(*current);
-                cout << "   ✅ SUCCESS: Governor successfully undid the tax!" << endl;
-            } catch (const exception& e) {
-                cout << "   ❌ Undo failed: " << e.what() << endl;
+            // Find someone who can do tax
+            bool undoTested = false;
+            for (int i = 0; i < 6 && !undoTested && !game.isGameOver(); i++) {
+                current = getCurrentPlayer(game, allPlayers);
+
+                if (current->getName() != "Alice" && !current->isSanctioned()) {
+                    cout << "   🎯 " << current->getName() << " will do TAX, then Alice will try UNDO..." << endl;
+
+                    current->startTurn();
+                    current->tax();
+
+                    // Now Alice tries to undo it
+                    try {
+                        cout << "   🔄 Alice attempts to UNDO the tax..." << endl;
+                        alice.undo(*current);
+                        cout << "   ✅ SUCCESS: Governor successfully undid the tax!" << endl;
+                        undoTested = true;
+                    } catch (const exception& e) {
+                        cout << "   ❌ Undo failed: " << e.what() << endl;
+                    }
+                    break;
+                } else {
+                    // Skip this turn
+                    current->startTurn();
+                    if (current->getCoins() >= 10) {
+                        // Must coup
+                        for (Player* target : allPlayers) {
+                            if (target != current && target != nullptr) {
+                                try {
+                                    current->coup(*target);
+                                    break;
+                                } catch (const exception& e) {
+                                    current->gather();
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        current->gather();
+                    }
+                }
             }
-            printPlayerStats(allPlayers);
+
+            if (!undoTested) {
+                cout << "   ⚠️ Couldn't test Governor undo in current game state!" << endl;
+            }
+
+            printPlayerStats(allPlayers, game);
         }
 
-        cout << "\n📊 PHASE 8: EDGE CASES & GAME COMPLETION" << endl;
-        cout << "=========================================" << endl;
+        cout << "\n📊 PHASE 8: EDGE CASES & FINAL TESTS" << endl;
+        cout << "=====================================" << endl;
 
-        // Test edge cases if game continues
         if (!game.isGameOver()) {
             cout << "\n2️⃣6️⃣ Testing EDGE CASES..." << endl;
 
@@ -578,11 +655,20 @@ int main() {
             }
 
             // Test: Multiple spy abilities
-            cout << "   👁️ Frank uses SPY abilities multiple times..." << endl;
+            cout << "   👁️ Testing multiple SPY abilities..." << endl;
             cout << "   - Frank peeks at Bob: " << frank.peekCoins(bob) << " coins" << endl;
             cout << "   - Frank peeks at Charlie: " << frank.peekCoins(charlie) << " coins" << endl;
             cout << "   - Frank blocks Alice's next arrest..." << endl;
             frank.blockNextArrest(alice);
+
+            // Test arrest on blocked player
+            try {
+                cout << "   🚫 Testing: Alice tries to arrest Frank (should fail)..." << endl;
+                alice.arrest(frank);
+                cout << "   ❌ ERROR: Should not be able to arrest when blocked!" << endl;
+            } catch (const exception& e) {
+                cout << "   ✅ CORRECT: " << e.what() << endl;
+            }
         }
 
         cout << "\n🏁 PHASE 9: FORCE GAME COMPLETION" << endl;
@@ -620,7 +706,7 @@ int main() {
                     current->gather();
                 }
 
-                printPlayerStats(allPlayers);
+                printPlayerStats(allPlayers, game);
                 printGameState(game);
                 turnCount++;
 
@@ -649,15 +735,15 @@ int main() {
             cout << endl;
         }
 
-        printPlayerStats(allPlayers);
+        printPlayerStats(allPlayers, game);
 
         cout << "\n🏁 PHASE 8: GAME COMPLETION" << endl;
         cout << "===========================" << endl;
 
         // Continue until game over
-        turnCount = 27;
-        while (!game.isGameOver() && turnCount < 50) {
-            cout << "\n" << turnCount << " Continuing game..." << endl;
+        int finalTurnCount = 0;
+        while (!game.isGameOver() && finalTurnCount < 50) {
+            cout << "\n" << finalTurnCount << " Continuing game..." << endl;
             try {
                 current = getCurrentPlayer(game, allPlayers);
                 current->startTurn();
@@ -675,13 +761,13 @@ int main() {
                     current->gather();
                 }
 
-                printPlayerStats(allPlayers);
-                turnCount++;
+                printPlayerStats(allPlayers, game);
+                finalTurnCount++;
 
             } catch (const exception& e) {
                 cout << "   Error: " << e.what() << endl;
                 if (current) current->endTurn();
-                turnCount++;
+                finalTurnCount++;
             }
         }
 

@@ -178,9 +178,12 @@ namespace coup {
      */
     bool Player::askForBlock(ActionType action, const Player* actor) const {
         if (blockDecisionCallback) {
-            return blockDecisionCallback(*this, action, actor);  // ← השאלה
+            if (actor == nullptr || !game.isAlive(*actor)) {
+                return false;
+            }
+            return blockDecisionCallback(*this, action, actor);
         }
-        return false; // Default: don't block
+        return false;
     }
 
     // -------------------------------
@@ -438,5 +441,4 @@ namespace coup {
     void Player::undo(Player & /*player*/) {
         // For specific roles only
     }
-
 }
