@@ -82,11 +82,3 @@ namespace coup {
     }
 
 }
-        if (amount > game.getBank()) {
-            throw std::runtime_error("Bank does not have enough coins");
-        }
-        to.setCoins(to.getCoins() + amount);
-        game.takeFromBank(amount);
-    }
-
-}

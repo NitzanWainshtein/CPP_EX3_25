@@ -26,12 +26,14 @@ namespace coup {
     /**
      * @brief Determines whether the Judge wants to block a bribe action.
      *
-     * Currently always returns true.
+     * Uses the blockDecisionCallback to ask the human player for decision.
+     * If no callback is set, defaults to not blocking.
+     *
      * @param actingPlayer The player who performed the bribe.
      * @return true if the bribe should be blocked.
      */
     bool Judge::shouldBlockBribe(Player& actingPlayer) {
-        return true;
+        return askForBlock(ActionType::Bribe, &actingPlayer);
     }
 
     /**
@@ -62,7 +64,7 @@ namespace coup {
      * @return true if the action was blocked.
      */
     bool Judge::tryBlockAction(ActionType action, Player* actor, Player*) {
-        if (action == ActionType::Bribe) {
+        if (action == ActionType::Bribe && actor != nullptr) {
             return tryBlockBribe(*actor);
         }
         return false;

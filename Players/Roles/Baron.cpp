@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 namespace coup {
-
     /**
      * @brief Constructs a Baron role for the specified player.
      *
@@ -13,7 +12,8 @@ namespace coup {
      * @param name The name of the player.
      */
     Baron::Baron(Game &game, const std::string &name)
-        : Player(game, name) {}
+        : Player(game, name) {
+    }
 
     /**
      * @brief Performs the Baron's special ability: invest.
@@ -32,6 +32,10 @@ namespace coup {
         BankManager::transferFromBank(game, *this, 6);
 
         lastAction = ActionType::Invest;
+        if (!bribeUsedThisTurn && askForBribe()) {
+            return;
+        }
+        game.nextTurn();
     }
 
     /**
@@ -41,5 +45,4 @@ namespace coup {
     std::string Baron::getRoleName() const {
         return "Baron";
     }
-
 }

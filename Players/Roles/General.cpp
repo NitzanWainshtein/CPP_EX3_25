@@ -23,7 +23,7 @@ namespace coup {
     void General::startTurn() {
         Player::startTurn();
         if (arrested) {
-            coins += 1;
+            BankManager::transferFromBank(game, *this, 1);
         }
     }
 
@@ -55,18 +55,20 @@ namespace coup {
 
     /**
      * @brief Determines whether the General should block a given coup.
+     * Uses the blockDecisionCallback to ask the human player.
      * @param actingPlayer The player performing the coup.
      * @param targetPlayer The player being targeted by the coup.
      * @return true if the General wants to block this coup.
      */
     bool General::shouldBlockCoup(Player &actingPlayer, Player &targetPlayer) {
-        return true;
+        return askForBlock(ActionType::Coup, &actingPlayer);
     }
 
     /**
      * @brief Attempts to block a coup targeting a player.
      *
      * Pays 5 coins to the bank if successful and blocks the coup action.
+     * The coins are not refunded even if the block is later undone.
      *
      * @param actingPlayer The player who initiated the coup.
      * @param targetPlayer The player being targeted by the coup.
@@ -80,6 +82,20 @@ namespace coup {
         BankManager::transferToBank(*this, game, 5);
         actingPlayer.blockLastAction();
         return true;
+    }
+
+    /**
+     * @brief General method used by the game to allow General to react to coup actions.
+     * @param action The type of action being attempted.
+     * @param actor The player who performed the action.
+     * @param target The target of the action.
+     * @return true if the action is blocked.
+     */
+    bool General::tryBlockAction(ActionType action, Player* actor, Player* target) {
+        if (action == ActionType::Coup && actor != nullptr && target != nullptr) {
+            return tryBlockCoup(*actor, *target);
+        }
+        return false;
     }
 
     /**

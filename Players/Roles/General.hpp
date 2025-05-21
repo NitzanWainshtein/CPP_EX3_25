@@ -38,6 +38,7 @@ namespace coup {
 
         /**
          * @brief Determines whether the General would block a coup.
+         * Uses callback to ask the human player for decision.
          * @param actingPlayer The player performing the coup.
          * @param targetPlayer The player being targeted.
          * @return true if the General chooses to block the coup.
@@ -51,6 +52,15 @@ namespace coup {
          * @return true if the coup was blocked.
          */
         bool tryBlockCoup(Player& actingPlayer, Player& targetPlayer);
+
+        /**
+         * @brief General method used by the game to allow General to react to coup actions.
+         * @param action The type of action being attempted.
+         * @param actor The player who performed the action.
+         * @param target The target of the action.
+         * @return true if the action is blocked.
+         */
+        bool tryBlockAction(ActionType action, Player* actor, Player* target) override;
 
         /**
          * @brief Called at the start of the turn.

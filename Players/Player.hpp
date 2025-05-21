@@ -3,6 +3,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 namespace coup {
 
@@ -16,6 +17,11 @@ namespace coup {
      * Each derived class implements a specific role with unique capabilities.
      */
     class Player {
+    public:
+        // Callback function types
+        using BribeDecisionCallback = std::function<bool(const Player&)>;
+        using BlockDecisionCallback = std::function<bool(const Player&, ActionType, const Player*)>;
+
     protected:
         Game &game;                  ///< Reference to the game instance.
         std::string name;            ///< Player's name.
@@ -28,6 +34,10 @@ namespace coup {
         bool actionBlocked;          ///< Whether the last action was blocked.
         bool bribeUsedThisTurn;      ///< Flag for bribe usage this turn.
         bool arrestBlocked;          ///< Flag for arrest block by Spy.
+
+        // Decision callbacks
+        BribeDecisionCallback bribeDecisionCallback;
+        BlockDecisionCallback blockDecisionCallback;
 
         /**
          * @brief Verifies that it's this player's turn.
@@ -64,6 +74,20 @@ namespace coup {
          */
         void requireCanArrest(const Player &target) const;
 
+        /**
+         * @brief Asks if player wants to use bribe for bonus action.
+         * @return true if player wants to bribe.
+         */
+        bool askForBribe() const;
+
+        /**
+         * @brief Asks if player wants to block an action.
+         * @param action The action type to potentially block.
+         * @param actor The player performing the action.
+         * @return true if player wants to block.
+         */
+        bool askForBlock(ActionType action, const Player* actor) const;
+
     public:
         /**
          * @brief Constructs a new Player.
@@ -89,6 +113,32 @@ namespace coup {
 
         void blockLastAction();
         void blockArrestNextTurn();
+
+        // -----------------------
+        // Decision Callbacks
+        // -----------------------
+
+        /**
+         * @brief Sets callback for bribe decisions.
+         * @param callback Function to call when deciding about bribe.
+         */
+        void setBribeDecisionCallback(BribeDecisionCallback callback);
+
+        /**
+         * @brief Sets callback for blocking decisions.
+         * @param callback Function to call when deciding about blocking.
+         */
+        void setBlockDecisionCallback(BlockDecisionCallback callback);
+
+        /**
+         * @brief Checks if player can use bribe.
+         * @return true if player can afford bribe and hasn't used it this turn.
+         */
+        bool canUseBribe() const;
+
+        // -----------------------
+        // Turn Management
+        // -----------------------
 
         virtual void startTurn();
         void endTurn();

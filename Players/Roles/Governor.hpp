@@ -43,6 +43,15 @@ namespace coup {
         void undo(Player &player) override;
 
         /**
+         * @brief Attempts to block tax actions from other players in real-time.
+         * @param action The action type being attempted.
+         * @param actor The player performing the action.
+         * @param target The target of the action (unused for tax).
+         * @return true if the action is blocked, false otherwise.
+         */
+        bool tryBlockAction(ActionType action, Player* actor, Player* target) override;
+
+        /**
          * @brief Returns the name of the role.
          * @return A string: "Governor"
          */

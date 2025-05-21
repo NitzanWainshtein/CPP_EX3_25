@@ -31,6 +31,7 @@ namespace coup {
 
         /**
          * @brief Indicates whether the Judge wants to block a bribe action.
+         * Uses the blockDecisionCallback to ask the human player.
          * @param actingPlayer The player who attempted to bribe.
          * @return true if the Judge chooses to block.
          */

@@ -18,31 +18,21 @@ namespace coup {
     /**
      * @brief Called at the start of the Merchant's turn.
      *
-     * - If the player has at least 3 coins, gains 1 extra coin automatically.
-     * - If the last action (e.g., Tax) was blocked, refunds the coin.
-     * - Resets turn-related flags.
-     * - Throws if player holds 10 or more coins (must coup).
+     * If the player has at least 3 coins, gains 1 extra coin automatically.
+     * Throws if player holds 10 or more coins (must coup).
      */
     void Merchant::startTurn() {
-        if (game.turn() != name) {
-            throw std::runtime_error("Not " + name + "'s turn");
-        }
+        requireTurn();
 
         if (coins >= 10) {
             throw std::runtime_error("You must perform a coup!");
         }
 
-        // If previous action (e.g., Tax) was blocked, refund coins
-        if (actionBlocked) {
-            if (lastAction == ActionType::Tax) {
-                BankManager::transferToBank(*this, game, taxAmount());
-            }
-            actionBlocked = false;
-        }
-
+        // Reset turn-related flags
         bribeUsedThisTurn = false;
         lastAction = ActionType::None;
         lastActionTarget = nullptr;
+        actionBlocked = false;
 
         // Special ability: +1 coin if starting with at least 3
         if (coins >= 3) {
