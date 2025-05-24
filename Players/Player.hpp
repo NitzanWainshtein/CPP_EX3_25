@@ -120,6 +120,25 @@ namespace coup {
         void blockArrestNextTurn();
 
         // -----------------------
+        // NEW: GUI Helper Methods
+        // -----------------------
+
+        /**
+         * @brief Resets turn state manually (for GUI forced coup with 10+ coins).
+         */
+        void resetTurnState();
+
+        /**
+         * @brief Gets the current bribe callback (for GUI override).
+         */
+        BribeDecisionCallback getBribeCallback() const;
+
+        /**
+         * @brief Temporarily overrides bribe callback (for GUI).
+         */
+        void overrideBribeCallback(BribeDecisionCallback callback);
+
+        // -----------------------
         // Decision Callbacks
         // -----------------------
 

@@ -129,6 +129,34 @@ namespace coup {
     ActionType Player::getLastAction() const { return this->lastAction; }
 
     // -------------------------------
+    // NEW: GUI Helper Methods
+    // -------------------------------
+
+    /**
+     * @brief Resets turn state manually (for GUI forced coup with 10+ coins).
+     */
+    void Player::resetTurnState() {
+        lastAction = ActionType::None;
+        lastActionTarget = nullptr;
+        bribeUsedThisTurn = false;
+        actionBlocked = false;
+    }
+
+    /**
+     * @brief Gets the current bribe callback (for GUI override).
+     */
+    Player::BribeDecisionCallback Player::getBribeCallback() const {
+        return bribeDecisionCallback;
+    }
+
+    /**
+     * @brief Temporarily overrides bribe callback (for GUI).
+     */
+    void Player::overrideBribeCallback(BribeDecisionCallback callback) {
+        bribeDecisionCallback = callback;
+    }
+
+    // -------------------------------
     // Decision Callbacks
     // -------------------------------
 
@@ -272,7 +300,7 @@ namespace coup {
     }
 
     // -------------------------------
-    // Game Actions
+    // Game Actions - FIXED FOR CONSISTENCY
     // -------------------------------
 
     /**
@@ -288,12 +316,8 @@ namespace coup {
         lastAction = ActionType::Gather;
         game.resolvePendingAction();
 
-        if (!bribeUsedThisTurn && askForBribe()) {
-            bribe();
-            return;
-        }
-
-        game.nextTurn();
+        // FIXED: No automatic bribe check - let GUI handle it
+        endTurn(); // FIXED: Use endTurn() consistently
     }
 
     /**
@@ -313,16 +337,13 @@ namespace coup {
         game.requestImmediateResponse(this, ActionType::Tax, nullptr);
         if (actionBlocked) {
             game.resolvePendingAction();
-            if (!bribeUsedThisTurn && askForBribe()) return;
-            game.nextTurn();
+            // FIXED: No automatic bribe check - let GUI handle it
+            endTurn(); // FIXED: Use endTurn() consistently
             return;
         }
 
-        if (!bribeUsedThisTurn && askForBribe()) {
-            return;
-        }
-
-        endTurn();
+        // FIXED: No automatic bribe check - let GUI handle it
+        endTurn(); // CONSISTENT: Always use endTurn()
     }
 
     /**
@@ -355,8 +376,8 @@ namespace coup {
 
         lastAction = ActionType::Bribe;
         bribeUsedThisTurn = true;
+        // CORRECT: Don't end turn here - allow bonus action to be taken
     }
-
 
     /**
      * @brief Performs the arrest action: steal 1 coin from target player.
@@ -373,11 +394,8 @@ namespace coup {
         lastAction = ActionType::Arrest;
         lastActionTarget = &player;
 
-        if (!bribeUsedThisTurn && askForBribe()) {
-            return;
-        }
-
-        endTurn();
+        // FIXED: No automatic bribe check - let GUI handle it
+        endTurn(); // FIXED: Always call endTurn()
     }
 
     /**
@@ -395,11 +413,8 @@ namespace coup {
         lastAction = ActionType::Sanction;
         lastActionTarget = &player;
 
-        if (!bribeUsedThisTurn && askForBribe()) {
-            return;
-        }
-
-        endTurn();
+        // FIXED: No automatic bribe check - let GUI handle it
+        endTurn(); // FIXED: Always call endTurn()
     }
 
     /**
@@ -425,7 +440,7 @@ namespace coup {
         lastAction = ActionType::Coup;
         lastActionTarget = &player;
 
-        endTurn();
+        endTurn(); // CORRECT: Already using endTurn()
     }
 
     // -------------------------------
