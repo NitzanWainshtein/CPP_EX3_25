@@ -23,6 +23,12 @@ namespace coup {
          */
         Governor(Game &game, const std::string &name);
 
+        Governor(const Governor& other) = delete;
+        Governor& operator=(const Governor& other) = delete;
+        Governor(Governor&& other) = delete;
+        Governor& operator=(Governor&& other) = delete;
+
+
         /**
          * @brief Performs a special tax action worth 3 coins.
          * The coins are collected during endTurn().

@@ -71,7 +71,13 @@ namespace coup {
      */
     std::string Game::turn() const {
         if (player_list.empty()) throw std::runtime_error("No players in game");
-        return player_list[current_turn_index]->getName();
+
+        Player* current = player_list[current_turn_index];
+        if (current == nullptr) {
+            throw std::runtime_error("Current player is eliminated");
+        }
+
+        return current->getName();
     }
 
     /**
@@ -213,13 +219,29 @@ namespace coup {
      */
     void Game::requestImmediateResponse(Player *actor, ActionType action, Player *target) {
         for (Player *p : player_list) {
-            if (p == actor || !isAlive(*p)) continue;
+            if (p == nullptr || p == actor) continue; // בדיקה ראשונה: לא לבדוק את עצמך או nullptr
+            if (!isAlive(*p)) continue;               // בדיקה שנייה: לא לבדוק שחקנים מתים
 
-            if (p->tryBlockAction(action, actor, target)) {
-                actor->blockLastAction();
+            // הגנה נוספת: ודא שה-actor חוקי
+            if (actor == nullptr || !isAlive(*actor)) {
+                std::cerr << "[ERROR] Invalid actor in requestImmediateResponse." << std::endl;
                 return;
+            }
+
+            try {
+                if (p->tryBlockAction(action, actor, target)) {
+                    std::cout << "[INFO] " << p->getName() << " blocks " << actor->getName() << "'s action!" << std::endl;
+                    actor->blockLastAction();
+                    return;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "[ERROR] Exception in tryBlockAction for player " << p->getName()
+                          << ": " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "[ERROR] Unknown crash in tryBlockAction for player " << p->getName() << std::endl;
             }
         }
     }
+
 
 } // namespace coup

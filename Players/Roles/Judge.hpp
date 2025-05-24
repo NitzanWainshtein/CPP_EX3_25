@@ -23,6 +23,11 @@ namespace coup {
          */
         Judge(Game &game, const std::string &name);
 
+        Judge(const Judge& other) = delete;
+        Judge& operator=(const Judge& other) = delete;
+        Judge(Judge&& other) = delete;
+        Judge& operator=(Judge&& other) = delete;
+
         /**
          * @brief Returns the name of the role.
          * @return A string: "Judge".

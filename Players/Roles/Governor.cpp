@@ -77,6 +77,10 @@ namespace coup {
      * @return true if the action is blocked, false otherwise.
      */
     bool Governor::tryBlockAction(ActionType action, Player* actor, Player* target) {
+        if (!game.isAlive(*this) || actor == nullptr || !game.isAlive(*actor)) {
+            return false;
+        }
+
         if (action == ActionType::Tax && actor != this) {
             if (askForBlock(ActionType::Tax, actor)) {
                 undo(*actor);

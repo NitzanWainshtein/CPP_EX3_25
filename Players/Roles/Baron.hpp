@@ -24,6 +24,11 @@ namespace coup {
          */
         Baron(Game &game, const std::string &name);
 
+        Baron(const Baron& other) = delete;
+        Baron& operator=(const Baron& other) = delete;
+        Baron(Baron&& other) = delete;
+        Baron& operator=(Baron&& other) = delete;
+
         /**
          * @brief Special ability: Invest 3 coins to receive 6.
          * @throws std::runtime_error if not the player's turn or insufficient coins.

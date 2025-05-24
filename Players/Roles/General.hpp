@@ -23,6 +23,10 @@ namespace coup {
          */
         General(Game &game, const std::string &name);
 
+        General(const General& other) = delete;
+        General& operator=(const General& other) = delete;
+        General(General&& other) = delete;
+        General& operator=(General&& other) = delete;
         /**
          * @brief Returns the role name.
          * @return A string: "General".

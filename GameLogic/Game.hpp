@@ -50,6 +50,10 @@ namespace coup {
          */
         Game();
 
+        Game(const Game& other) = delete;
+        Game& operator=(const Game& other) = delete;
+        Game(Game&& other) = delete;
+        Game& operator=(Game&& other) = delete;
         /**
          * @brief Checks if a player name already exists.
          * @param name The name to check.

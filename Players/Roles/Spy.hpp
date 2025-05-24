@@ -25,6 +25,11 @@ namespace coup {
          */
         Spy(Game &game, const std::string &name);
 
+        Spy(const Spy& other) = delete;
+        Spy& operator=(const Spy& other) = delete;
+        Spy(Spy&& other) = delete;
+        Spy& operator=(Spy&& other) = delete;
+
         /**
          * @brief Returns the name of the role.
          * @return A string: "Spy"

@@ -64,7 +64,7 @@ namespace coup {
      * @return true if the action was blocked.
      */
     bool Judge::tryBlockAction(ActionType action, Player* actor, Player*) {
-        if (action == ActionType::Bribe && actor != nullptr) {
+        if (action == ActionType::Bribe && actor != nullptr && game.isAlive(*actor)) {
             return tryBlockBribe(*actor);
         }
         return false;

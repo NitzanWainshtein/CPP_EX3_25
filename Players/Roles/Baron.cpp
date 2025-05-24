@@ -35,7 +35,7 @@ namespace coup {
         if (!bribeUsedThisTurn && askForBribe()) {
             return;
         }
-        game.nextTurn();
+        endTurn();
     }
 
     /**

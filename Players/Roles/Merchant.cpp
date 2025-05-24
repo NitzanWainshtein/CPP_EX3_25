@@ -4,6 +4,7 @@
 #include "../../GameLogic/Game.hpp"
 #include "../../GameLogic/BankManager.hpp"
 #include <stdexcept>
+#include <iostream>
 
 namespace coup {
 
@@ -18,25 +19,21 @@ namespace coup {
     /**
      * @brief Called at the start of the Merchant's turn.
      *
-     * If the player has at least 3 coins, gains 1 extra coin automatically.
-     * Throws if player holds 10 or more coins (must coup).
+     * First calls Player::startTurn() to handle:
+     * - Turn validation
+     * - 10-coin coup requirement check
+     * - Flag resets (bribeUsedThisTurn, actionBlocked, etc.)
+     * - Debug output
+     *
+     * Then adds Merchant-specific ability:
+     * - If player has at least 3 coins, gains 1 extra coin automatically.
      */
     void Merchant::startTurn() {
-        requireTurn();
+        Player::startTurn();
 
-        if (coins >= 10) {
-            throw std::runtime_error("You must perform a coup!");
-        }
-
-        // Reset turn-related flags
-        bribeUsedThisTurn = false;
-        lastAction = ActionType::None;
-        lastActionTarget = nullptr;
-        actionBlocked = false;
-
-        // Special ability: +1 coin if starting with at least 3
         if (coins >= 3) {
             BankManager::transferFromBank(game, *this, 1);
+            std::cout << name << " (Merchant) receives bonus coin for having 3+ coins!" << std::endl;
         }
     }
 

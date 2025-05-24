@@ -24,12 +24,17 @@ namespace coup {
          */
         Merchant(Game &game, const std::string &name);
 
+        // Rule of Three/Five
+        Merchant(const Merchant& other) = delete;
+        Merchant& operator=(const Merchant& other) = delete;
+        Merchant(Merchant&& other) = delete;
+        Merchant& operator=(Merchant&& other) = delete;
+
         /**
          * @brief Called at the start of the turn.
          *
-         * If the player has 3+ coins, they receive 1 bonus coin.
-         * If a previous action was blocked (e.g., tax), coins are refunded.
-         * Throws if the player has 10+ coins and must coup.
+         * Calls base Player::startTurn() first for proper setup,
+         * then if the player has 3+ coins, they receive 1 bonus coin.
          */
         void startTurn() override;
 

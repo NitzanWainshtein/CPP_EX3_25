@@ -16,6 +16,12 @@ namespace coup {
     class BankManager {
     public:
 
+        BankManager() = delete;  // Prevent instantiation (it's all static methods)
+        BankManager(const BankManager& other) = delete;
+        BankManager& operator=(const BankManager& other) = delete;
+        BankManager(BankManager&& other) = delete;
+        BankManager& operator=(BankManager&& other) = delete;
+
         /**
          * @brief Transfers coins directly between two players.
          *

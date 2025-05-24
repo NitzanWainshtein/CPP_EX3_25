@@ -101,6 +101,11 @@ namespace coup {
          */
         virtual ~Player();
 
+        Player(const Player& other) = delete;
+        Player& operator=(const Player& other) = delete;
+        Player(Player&& other) = delete;
+        Player& operator=(Player&& other) = delete;
+
         // -----------------------
         // Basic Info & State
         // -----------------------

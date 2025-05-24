@@ -73,12 +73,10 @@ namespace coup {
      * @throws std::runtime_error if player already sanctioned or insufficient coins.
      */
     void Player::requireCanSanction(const Player &target) const {
-        if (target.isSanctioned())
-            throw std::runtime_error("Player is already sanctioned");
-        if (coins < 3 && target.getRoleName() != "Judge")
-            throw std::runtime_error("Not enough coins to sanction player");
-        if (coins < 4 && target.getRoleName() == "Judge")
-            throw std::runtime_error("Not enough coins to sanction Judge");
+        int requiredCoins = (target.getRoleName() == "Judge") ? 4 : 3;
+        if (coins < requiredCoins) {
+            throw std::runtime_error("Not enough coins to sanction " + target.getRoleName());
+        }
     }
 
     /**
@@ -291,6 +289,7 @@ namespace coup {
         game.resolvePendingAction();
 
         if (!bribeUsedThisTurn && askForBribe()) {
+            bribe();
             return;
         }
 
@@ -343,8 +342,13 @@ namespace coup {
         }
 
         BankManager::transferToBank(*this, game, 4);
+
+        std::cout << "[DEBUG] " << name << " is attempting bribe..." << std::endl;
         game.requestImmediateResponse(this, ActionType::Bribe, nullptr);
+        std::cout << "[DEBUG] requestImmediateResponse completed" << std::endl;
+
         if (actionBlocked) {
+            std::cout << "[DEBUG] Bribe was blocked!" << std::endl;
             endTurn();
             return;
         }
@@ -352,6 +356,7 @@ namespace coup {
         lastAction = ActionType::Bribe;
         bribeUsedThisTurn = true;
     }
+
 
     /**
      * @brief Performs the arrest action: steal 1 coin from target player.
