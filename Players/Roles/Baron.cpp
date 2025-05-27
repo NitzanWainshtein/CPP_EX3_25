@@ -32,6 +32,8 @@ namespace coup {
         BankManager::transferFromBank(game, *this, 6);
 
         lastAction = ActionType::Invest;
+
+        // Check for bribe like other actions
         if (!bribeUsedThisTurn && askForBribe()) {
             return;
         }

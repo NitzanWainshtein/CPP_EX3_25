@@ -156,6 +156,14 @@ namespace coup {
         bribeDecisionCallback = callback;
     }
 
+    /**
+     * @brief Checks if player has used bribe this turn.
+     * @return true if bribe was used.
+     */
+    bool Player::hasBribedThisTurn() const {
+        return bribeUsedThisTurn;
+    }
+
     // -------------------------------
     // Decision Callbacks
     // -------------------------------
@@ -300,7 +308,7 @@ namespace coup {
     }
 
     // -------------------------------
-    // Game Actions - FIXED FOR CONSISTENCY
+    // Game Actions
     // -------------------------------
 
     /**
@@ -316,8 +324,10 @@ namespace coup {
         lastAction = ActionType::Gather;
         game.resolvePendingAction();
 
-        // FIXED: No automatic bribe check - let GUI handle it
-        endTurn(); // FIXED: Use endTurn() consistently
+        if (!bribeUsedThisTurn && askForBribe()) {
+            return;
+        }
+        endTurn();
     }
 
     /**
@@ -337,13 +347,18 @@ namespace coup {
         game.requestImmediateResponse(this, ActionType::Tax, nullptr);
         if (actionBlocked) {
             game.resolvePendingAction();
-            // FIXED: No automatic bribe check - let GUI handle it
-            endTurn(); // FIXED: Use endTurn() consistently
+            if (!bribeUsedThisTurn && askForBribe()) {
+                return;
+            }
+            endTurn();
             return;
         }
 
-        // FIXED: No automatic bribe check - let GUI handle it
-        endTurn(); // CONSISTENT: Always use endTurn()
+        if (!bribeUsedThisTurn && askForBribe()) {
+            return;
+        }
+
+        endTurn();
     }
 
     /**
@@ -394,8 +409,10 @@ namespace coup {
         lastAction = ActionType::Arrest;
         lastActionTarget = &player;
 
-        // FIXED: No automatic bribe check - let GUI handle it
-        endTurn(); // FIXED: Always call endTurn()
+        if (!bribeUsedThisTurn && askForBribe()) {
+            return;
+        }
+        endTurn();
     }
 
     /**
@@ -413,8 +430,10 @@ namespace coup {
         lastAction = ActionType::Sanction;
         lastActionTarget = &player;
 
-        // FIXED: No automatic bribe check - let GUI handle it
-        endTurn(); // FIXED: Always call endTurn()
+        if (!bribeUsedThisTurn && askForBribe()) {
+            return;
+        }
+        endTurn();
     }
 
     /**
@@ -440,7 +459,7 @@ namespace coup {
         lastAction = ActionType::Coup;
         lastActionTarget = &player;
 
-        endTurn(); // CORRECT: Already using endTurn()
+        endTurn();
     }
 
     // -------------------------------

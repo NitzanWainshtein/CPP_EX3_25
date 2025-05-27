@@ -1,3 +1,4 @@
+```cpp
 // Email: nitzanwa@gmail.com
 
 #include "GUI.hpp"
@@ -18,11 +19,12 @@
 #include "../Players/Roles/Judge.hpp"
 #include "../Players/Roles/Merchant.hpp"
 
-using namespace coup;
+namespace coup {
 
 // ------------------- Button Implementation -------------------
 
-Button::Button(float x, float y, float width, float height, const sf::Font& font, const std::string& label, std::function<void()> cb)
+Button::Button(float x, float y, float width, float height, const sf::Font &font, const std::string &label,
+               std::function<void()> cb)
     : onClick(std::move(cb)) {
     shape.setPosition(x, y);
     shape.setSize({width, height});
@@ -39,7 +41,7 @@ Button::Button(float x, float y, float width, float height, const sf::Font& font
                      y + (height - textBounds.height) / 2 - textBounds.top);
 }
 
-void Button::draw(sf::RenderWindow& window) {
+void Button::draw(sf::RenderWindow &window) {
     window.draw(shape);
     window.draw(text);
 }
@@ -60,7 +62,7 @@ void Button::setEnabled(bool enabled) {
 
 // ------------------- MessagePopup Implementation -------------------
 
-MessagePopup::MessagePopup(const sf::Font& font) : isVisible(false) {
+MessagePopup::MessagePopup(const sf::Font &font) : isVisible(false) {
     // Semi-transparent overlay
     overlay.setSize(sf::Vector2f(1280, 900));
     overlay.setFillColor(sf::Color(0, 0, 0, 150));
@@ -92,7 +94,7 @@ MessagePopup::MessagePopup(const sf::Font& font) : isVisible(false) {
     buttonText.setPosition(625, 530);
 }
 
-void MessagePopup::show(const std::string& message) {
+void MessagePopup::show(const std::string &message) {
     currentMessage = message;
 
     // Simple word wrapping - break long lines
@@ -125,7 +127,7 @@ bool MessagePopup::handleClick(sf::Vector2i mousePos) {
     return false;
 }
 
-void MessagePopup::draw(sf::RenderWindow& window) {
+void MessagePopup::draw(sf::RenderWindow &window) {
     if (!isVisible) return;
 
     window.draw(overlay);
@@ -137,13 +139,17 @@ void MessagePopup::draw(sf::RenderWindow& window) {
 
 // ------------------- CoupGUI Implementation -------------------
 
-CoupGUI::CoupGUI() : window(sf::VideoMode(1280, 900), "Coup Game GUI", sf::Style::Titlebar | sf::Style::Close), popup(font) {
+CoupGUI::CoupGUI() : window(sf::VideoMode(1280, 900), "Coup Game GUI", sf::Style::Titlebar | sf::Style::Close),
+                     currentState(State::Start) {
     window.setFramerateLimit(60);
 
     if (!font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")) {
         std::cerr << "Failed to load font" << std::endl;
         exit(1);
     }
+    
+    popup = MessagePopup(font);
+    // Remove the BlockingDialog initialization since it's not needed
 
     // Load background images
     loadBackgrounds();
@@ -158,12 +164,12 @@ CoupGUI::CoupGUI() : window(sf::VideoMode(1280, 900), "Coup Game GUI", sf::Style
     turnInProgress = false;
     playerCountSelected = false;
     messageTimer = 0.0f;
-    waitingForBribeDecision = false; // NEW FLAG!
+    waitingForBribeDecision = false;
 }
 
 CoupGUI::~CoupGUI() {
     // Clean up players if they exist
-    for (Player* p : players) {
+    for (Player *p : players) {
         delete p;
     }
     players.clear();
@@ -196,24 +202,24 @@ void CoupGUI::run() {
     }
 }
 
-void CoupGUI::handleEvent(const sf::Event& event) {
+void CoupGUI::handleEvent(const sf::Event &event) {
     if (event.type == sf::Event::MouseButtonPressed) {
         // Handle popup first
         if (popup.visible()) {
             popup.handleClick(sf::Mouse::getPosition(window));
             return;
         }
-
+        
         // Handle regular buttons
-        for (auto& btn : buttons) {
+        for (auto &btn : buttons) {
             if (btn.isClicked(sf::Mouse::getPosition(window))) {
                 btn.onClick();
                 break;
             }
         }
     } else if (currentState == State::EnterNames && event.type == sf::Event::TextEntered) {
-        if (popup.visible()) return;  // Don't handle text input when popup is shown
-
+        if (popup.visible()) return; // Don't handle text input when popup is shown
+        
         if (event.text.unicode == '\b' && !nameBuffers[nameIndex].empty()) {
             nameBuffers[nameIndex].pop_back();
         } else if (event.text.unicode == '\r' || event.text.unicode == '\n') {
@@ -267,7 +273,7 @@ void CoupGUI::render(float deltaTime) {
 
     // Draw all buttons (if popup not visible)
     if (!popup.visible()) {
-        for (auto& b : buttons)
+        for (auto &b : buttons)
             b.draw(window);
     }
 
@@ -276,7 +282,7 @@ void CoupGUI::render(float deltaTime) {
         messageTimer -= deltaTime;
         window.draw(messageText);
     }
-
+    
     // Draw popup last (on top of everything)
     popup.draw(window);
 
@@ -285,7 +291,7 @@ void CoupGUI::render(float deltaTime) {
 
 void CoupGUI::drawExitButton() {
     // Small exit button in top-right corner
-    static Button exitBtn(1180, 10, 80, 30, font, "Exit", [&]() {
+    Button exitBtn(1180, 10, 80, 30, font, "Exit", [this]() {
         resetGame();
         currentState = State::Start;
     });
@@ -314,12 +320,12 @@ void CoupGUI::drawStartMenu() {
     window.draw(credits);
 
     // Just the buttons, centered
-    buttons.emplace_back(540, 400, 200, 60, font, "Start Game", [&]() {
+    buttons.emplace_back(540, 400, 200, 60, font, "Start Game", [this]() {
         currentState = State::SelectCount;
         playerCountSelected = false;
     });
 
-    buttons.emplace_back(540, 480, 200, 60, font, "Exit Game", [&]() {
+    buttons.emplace_back(540, 480, 200, 60, font, "Exit Game", [this]() {
         window.close();
     });
 }
@@ -339,7 +345,7 @@ void CoupGUI::drawPlayerCountButtons() {
     // Only show count buttons if not selected yet
     if (!playerCountSelected) {
         for (int i = 2; i <= 6; ++i) {
-            buttons.emplace_back(450 + (i - 2) * 80, 300, 60, 60, font, std::to_string(i), [&, i]() {
+            buttons.emplace_back(450 + (i - 2) * 80, 300, 60, 60, font, std::to_string(i), [this, i]() {
                 playerCount = i;
                 nameBuffers = std::vector<std::string>(playerCount);
                 playerCountSelected = true;
@@ -357,7 +363,7 @@ void CoupGUI::drawPlayerCountButtons() {
         selectedText.setPosition((window.getSize().x - selectedBounds.width) / 2, 320);
         window.draw(selectedText);
 
-        buttons.emplace_back(540, 380, 200, 50, font, "Continue", [&]() {
+        buttons.emplace_back(540, 380, 200, 50, font, "Continue", [this]() {
             currentState = State::EnterNames;
         });
     }
@@ -389,8 +395,9 @@ void CoupGUI::drawNameInputs() {
         sf::Text text;
         text.setFont(font);
         text.setCharacterSize(24);
-        text.setFillColor(i == nameIndex ? sf::Color::Green :
-                         (!nameBuffers[i].empty() ? sf::Color::White : sf::Color(120, 120, 120)));
+        text.setFillColor(i == nameIndex 
+                          ? sf::Color::Green 
+                          : (!nameBuffers[i].empty() ? sf::Color::White : sf::Color(120, 120, 120)));
 
         float yPos = 180 + i * 50;
         text.setPosition(400, yPos);
@@ -404,7 +411,7 @@ void CoupGUI::drawNameInputs() {
 
     // Check if all names are filled
     bool allNamesFilled = true;
-    for (const auto& name : nameBuffers) {
+    for (const auto &name : nameBuffers) {
         if (name.empty()) {
             allNamesFilled = false;
             break;
@@ -413,12 +420,14 @@ void CoupGUI::drawNameInputs() {
 
     // Show start game button if all names are filled
     if (allNamesFilled) {
-        buttons.emplace_back(540, 180 + playerCount * 50 + 30, 200, 50, font, "Start Game", [&]() {
+        buttons.emplace_back(540, 180 + playerCount * 50 + 30, 200, 50, font, "Start Game", [this]() {
             // Check for duplicate names BEFORE creating the game
             for (size_t i = 0; i < nameBuffers.size(); ++i) {
                 for (size_t j = i + 1; j < nameBuffers.size(); ++j) {
                     if (nameBuffers[i] == nameBuffers[j]) {
-                        showPopup("Error: Player name '" + nameBuffers[i] + "' is used more than once! Please choose unique names.");
+                        showPopup(
+                            "Error: Player name '" + nameBuffers[i] + 
+                            "' is used more than once! Please choose unique names.");
                         return;
                     }
                 }
@@ -430,7 +439,7 @@ void CoupGUI::drawNameInputs() {
     }
 
     // Back button to change player count
-    buttons.emplace_back(340, 180 + playerCount * 50 + 30, 150, 50, font, "Back", [&]() {
+    buttons.emplace_back(340, 180 + playerCount * 50 + 30, 150, 50, font, "Back", [this]() {
         currentState = State::SelectCount;
         playerCountSelected = false;
         nameBuffers.clear();
@@ -438,9 +447,9 @@ void CoupGUI::drawNameInputs() {
     });
 }
 
-bool CoupGUI::isDuplicateName(const std::string& name) const {
+bool CoupGUI::isDuplicateName(const std::string &name) const {
     int count = 0;
-    for (const auto& bufferName : nameBuffers) {
+    for (const auto &bufferName : nameBuffers) {
         if (bufferName == name) {
             count++;
             if (count > 1) return true;
@@ -459,8 +468,8 @@ void CoupGUI::startGame() {
 
         // Create players with random roles
         players.clear();
-        for (const auto& name : playerNames) {
-            players.push_back(randomPlayer(*game, name));
+        for (const auto &name : playerNames) {
+            players.push_back(PlayerFactory::randomPlayer(*game, name));
         }
 
         // Reset turn state
@@ -472,8 +481,7 @@ void CoupGUI::startGame() {
         updateButtons();
 
         showMessage("Game started! Click 'Start Turn' when " + game->turn() + " is ready.");
-
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         showPopup("Failed to start game: " + std::string(e.what()));
         resetGame();
         currentState = State::EnterNames;
@@ -483,7 +491,7 @@ void CoupGUI::startGame() {
 
 void CoupGUI::resetGame() {
     // Clean up existing players
-    for (Player* p : players) {
+    for (Player *p : players) {
         delete p;
     }
     players.clear();
@@ -496,25 +504,44 @@ void CoupGUI::resetGame() {
 }
 
 void CoupGUI::setupCallbacks() {
-    for (auto* p : players) {
-        // Disable all automatic bribe decisions - GUI will handle
-        p->setBribeDecisionCallback([this, p](const Player&) -> bool {
-            return false;  // Never auto-bribe - GUI handles it
+    for (auto *p : players) {
+        // Set up bribe callback to intercept the decision
+        p->setBribeDecisionCallback([this, p](const Player &) -> bool {
+            // If it's the current player's turn and they can bribe,
+            // return true to prevent automatic endTurn, then set the flag
+            Player *current = getCurrentPlayer();
+            if (current == p && p->canUseBribe()) {
+                waitingForBribeDecision = true;
+                return true; // This prevents endTurn() from being called
+            }
+            return false;
         });
 
-        p->setBlockDecisionCallback([this, p](const Player& blocker, ActionType action, const Player* actor) -> bool {
+        p->setBlockDecisionCallback([this, p](const Player &blocker, ActionType action, const Player *actor) -> bool {
             std::string actionName;
-            switch(action) {
-                case ActionType::Tax: actionName = "tax"; break;
-                case ActionType::Bribe: actionName = "bribe"; break;
-                case ActionType::Coup: actionName = "coup"; break;
-                default: actionName = "action";
+            switch (action) {
+                case ActionType::Tax: 
+                    actionName = "tax";
+                    break;
+                case ActionType::Bribe: 
+                    actionName = "bribe";
+                    break;
+                case ActionType::Coup: 
+                    actionName = "coup";
+                    break;
+                default: 
+                    actionName = "action";
+                    break;
             }
 
             bool canBlock = false;
-            if (blocker.getRoleName() == "Governor" && action == ActionType::Tax) canBlock = true;
-            else if (blocker.getRoleName() == "Judge" && action == ActionType::Bribe) canBlock = true;
-            else if (blocker.getRoleName() == "General" && action == ActionType::Coup && blocker.getCoins() >= 5) canBlock = true;
+            if (blocker.getRoleName() == "Governor" && action == ActionType::Tax) {
+                canBlock = true;
+            } else if (blocker.getRoleName() == "Judge" && action == ActionType::Bribe) {
+                canBlock = true;
+            } else if (blocker.getRoleName() == "General" && action == ActionType::Coup && blocker.getCoins() >= 5) {
+                canBlock = true;
+            }
 
             if (canBlock) {
                 showMessage(blocker.getName() + " blocks " + actor->getName() + "'s " + actionName + "!");
@@ -526,21 +553,22 @@ void CoupGUI::setupCallbacks() {
 }
 
 Player* CoupGUI::getCurrentPlayer() {
-    if (!game) return nullptr;
+    // Check if game is over FIRST
+    if (currentState == State::GameOver) return nullptr;
 
     try {
-        // Check if game is over first
+        // Double check game state
         if (game->isGameOver()) {
             return nullptr;
         }
 
         std::string currentName = game->turn();
-        for (auto* p : players) {
+        for (auto *p : players) {
             if (p != nullptr && game->isAlive(*p) && p->getName() == currentName) {
                 return p;
             }
         }
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         // Game over or error
         return nullptr;
     }
@@ -585,7 +613,7 @@ void CoupGUI::drawPlayers() {
     turnStatus.setCharacterSize(18);
     turnStatus.setPosition(40, 100);
 
-    Player* current = getCurrentPlayer();
+    Player *current = getCurrentPlayer();
     if (current) {
         if (waitingForBribeDecision) {
             turnStatus.setString("Choose: Bribe for bonus action or End Turn");
@@ -625,7 +653,7 @@ void CoupGUI::drawPlayers() {
     // Only display ALIVE players
     int displayIndex = 0;
     for (size_t i = 0; i < players.size(); ++i) {
-        Player* p = players[i];
+        Player *p = players[i];
         if (p == nullptr || !game->isAlive(*p)) continue;
 
         bool isCurrentTurn = false;
@@ -683,7 +711,7 @@ void CoupGUI::drawPlayers() {
             sf::FloatRect winnerBounds = winnerText.getLocalBounds();
             winnerText.setPosition((window.getSize().x - winnerBounds.width) / 2, 300);
             window.draw(winnerText);
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             winnerText.setString("Game Over!");
             sf::FloatRect winnerBounds = winnerText.getLocalBounds();
             winnerText.setPosition((window.getSize().x - winnerBounds.width) / 2, 300);
@@ -692,7 +720,7 @@ void CoupGUI::drawPlayers() {
     }
 }
 
-void CoupGUI::showMessage(const std::string& msg) {
+void CoupGUI::showMessage(const std::string &msg) {
     std::cout << "[INFO] " << msg << std::endl;
     currentMessage = msg;
     messageText.setString(msg);
@@ -700,7 +728,7 @@ void CoupGUI::showMessage(const std::string& msg) {
     messageTimer = MESSAGE_DURATION;
 }
 
-void CoupGUI::showError(const std::string& msg) {
+void CoupGUI::showError(const std::string &msg) {
     std::cerr << "[ERROR] " << msg << std::endl;
     currentMessage = "ERROR: " + msg;
     messageText.setString(currentMessage);
@@ -708,7 +736,7 @@ void CoupGUI::showError(const std::string& msg) {
     messageTimer = MESSAGE_DURATION;
 }
 
-void CoupGUI::showPopup(const std::string& msg) {
+void CoupGUI::showPopup(const std::string &msg) {
     popup.show(msg);
 }
 
@@ -720,27 +748,32 @@ void CoupGUI::checkForWinner() {
             currentState = State::GameOver;
             turnInProgress = false;
             waitingForBribeDecision = false;
-            updateButtons();
 
-            // Show winner message immediately
+            // Clear buttons immediately to prevent further actions
+            buttons.clear();
+
+            // Show winner message
             try {
                 std::string winnerName = game->winner();
                 showMessage("Game Over! Winner: " + winnerName);
             } catch (...) {
                 showMessage("Game Over!");
             }
+
+            // Update buttons will add the "Play Again" button
+            updateButtons();
         }
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         // Game not over yet
     }
 }
 
 // Safe target collection
-std::vector<Player*> CoupGUI::getValidTargets(Player* current) {
+std::vector<Player*> CoupGUI::getValidTargets(Player *current) {
     std::vector<Player*> validTargets;
     if (!current || !game) return validTargets;
 
-    for (auto* p : players) {
+    for (auto *p : players) {
         if (p != nullptr && p != current && game->isAlive(*p)) {
             validTargets.push_back(p);
         }
@@ -752,7 +785,7 @@ void CoupGUI::updateButtons() {
     buttons.clear();
 
     if (currentState == State::GameOver) {
-        buttons.emplace_back(540, 400, 200, 60, font, "Play Again", [&]() {
+        buttons.emplace_back(540, 400, 200, 60, font, "Play Again", [this]() {
             resetGame();
             currentState = State::Start;
         });
@@ -761,7 +794,7 @@ void CoupGUI::updateButtons() {
 
     if (currentState != State::Playing) return;
 
-    Player* current = getCurrentPlayer();
+    Player *current = getCurrentPlayer();
     if (!current) {
         // No current player - game might be over
         checkForWinner();
@@ -778,7 +811,7 @@ void CoupGUI::updateButtons() {
     int buttonsPerRow = 7;
     int buttonCount = 0;
 
-    auto addButton = [&](const std::string& label, std::function<void()> cb) {
+    auto addButton = [&](const std::string &label, std::function<void()> cb) {
         buttons.emplace_back(actionsX, actionsY, width, height, font, label, cb);
         buttonCount++;
 
@@ -794,15 +827,32 @@ void CoupGUI::updateButtons() {
         if (current->canUseBribe()) {
             addButton("Bribe (4 coins)", [=]() {
                 try {
-                    current->startTurn();
                     current->bribe();
-                    turnInProgress = true;
-                    waitingForBribeDecision = false;
-                    showMessage(current->getName() + " used bribe for bonus action. Choose your bonus action!");
+                    if (current->getLastAction() != ActionType::Bribe) {
+                        // Bribe was blocked, turn is over
+                        showMessage(current->getName() + "'s bribe was blocked! Turn ended.");
+                        turnInProgress = false;
+                        waitingForBribeDecision = false;
+                        checkForWinner();
+                        if (currentState != State::GameOver) {
+                            try {
+                                showMessage("Now it's " + game->turn() + "'s turn.");
+                            } catch (...) {
+                                checkForWinner();
+                            }
+                        }
+                    } else {
+                        // Bribe succeeded, player can take bonus action
+                        showMessage(current->getName() + " used bribe for bonus action. Choose your bonus action!");
+                        waitingForBribeDecision = false;
+                    }
+
                     updateButtons();
-                } catch (const std::exception& e) {
+                } catch (const std::exception &e) {
                     showPopup("Error: " + std::string(e.what()));
                     waitingForBribeDecision = false;
+                    turnInProgress = false;
+                    updateButtons();
                 }
             });
         }
@@ -810,6 +860,9 @@ void CoupGUI::updateButtons() {
         addButton("End Turn", [=]() {
             waitingForBribeDecision = false;
             turnInProgress = false;
+
+            // Manually end the turn
+            current->endTurn();
 
             checkForWinner();
             if (currentState != State::GameOver) {
@@ -827,15 +880,15 @@ void CoupGUI::updateButtons() {
 
     // FORCED COUP with 10+ coins
     if (current->getCoins() >= 10) {
-        std::vector<Player*> validTargets = getValidTargets(current);
+        std::vector<Player *> validTargets = getValidTargets(current);
 
-        for (auto* target : validTargets) {
+        for (auto *target : validTargets) {
             std::string targetName = target->getName();
             addButton("Coup " + targetName, [=]() {
                 try {
                     // Find target safely
-                    Player* safeTarget = nullptr;
-                    for (auto* p : players) {
+                    Player *safeTarget = nullptr;
+                    for (auto *p : players) {
                         if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
                             safeTarget = p;
                             break;
@@ -851,15 +904,17 @@ void CoupGUI::updateButtons() {
                         waitingForBribeDecision = false;
                         showMessage(current->getName() + " was forced to coup " + targetName);
 
+                        // Check for winner BEFORE updating buttons
                         checkForWinner();
-                        // Don't call updateButtons if game is over - prevents segfault!
+
+                        // Only update buttons if game is not over
                         if (currentState != State::GameOver) {
                             updateButtons();
                         }
                     } else {
                         showPopup("Error: Target player no longer exists");
                     }
-                } catch (const std::exception& e) {
+                } catch (const std::exception &e) {
                     showPopup("Error: " + std::string(e.what()));
                     turnInProgress = false;
                     waitingForBribeDecision = false;
@@ -875,321 +930,3 @@ void CoupGUI::updateButtons() {
     if (!turnInProgress) {
         addButton("Start Turn", [=]() {
             try {
-                current->startTurn();
-                turnInProgress = true;
-                waitingForBribeDecision = false;
-                showMessage(current->getName() + " started their turn");
-                updateButtons();
-            } catch (const std::exception& e) {
-                showPopup("Error: " + std::string(e.what()));
-                turnInProgress = false;
-                waitingForBribeDecision = false;
-            }
-        });
-        return; // Only show start turn button
-    }
-
-    // Phase 2: Action Selection (if no action taken yet)
-    bool hasActed = (current->getLastAction() != ActionType::None);
-
-    if (!hasActed) {
-        // Basic actions
-        addButton("Gather", [=]() {
-            try {
-                current->gather(); // This calls endTurn() internally
-                turnInProgress = false;
-
-                // Check if player can bribe AFTER the action
-                if (current->canUseBribe()) {
-                    waitingForBribeDecision = true;
-                    showMessage(current->getName() + " gathered 1 coin. Choose: Bribe for bonus action or End Turn.");
-                } else {
-                    showMessage(current->getName() + " gathered 1 coin. Turn ended.");
-                }
-
-                checkForWinner();
-                if (currentState != State::GameOver) {
-                    updateButtons();
-                }
-            } catch (const std::exception& e) {
-                showPopup("Error: " + std::string(e.what()));
-                turnInProgress = false;
-                waitingForBribeDecision = false;
-            }
-        });
-
-        addButton("Tax", [=]() {
-            try {
-                current->tax(); // This calls endTurn() internally
-                turnInProgress = false;
-
-                // Check if player can bribe AFTER the action
-                if (current->canUseBribe()) {
-                    waitingForBribeDecision = true;
-                    showMessage(current->getName() + " collected tax. Choose: Bribe for bonus action or End Turn.");
-                } else {
-                    showMessage(current->getName() + " collected tax. Turn ended.");
-                }
-
-                checkForWinner();
-                if (currentState != State::GameOver) {
-                    updateButtons();
-                }
-            } catch (const std::exception& e) {
-                showPopup("Error: " + std::string(e.what()));
-                turnInProgress = false;
-                waitingForBribeDecision = false;
-            }
-        });
-
-        // Targeted actions
-        std::vector<Player*> validTargets = getValidTargets(current);
-        for (auto* target : validTargets) {
-            std::string targetName = target->getName();
-
-            addButton("Arrest " + targetName, [=]() {
-                // Find target safely each time
-                Player* safeTarget = nullptr;
-                for (auto* p : players) {
-                    if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
-                        safeTarget = p;
-                        break;
-                    }
-                }
-
-                if (safeTarget) {
-                    try {
-                        current->arrest(*safeTarget); // This calls endTurn() internally
-                        turnInProgress = false;
-
-                        // Check if player can bribe AFTER the action
-                        if (current->canUseBribe()) {
-                            waitingForBribeDecision = true;
-                            showMessage(current->getName() + " arrested " + targetName + ". Choose: Bribe for bonus action or End Turn.");
-                        } else {
-                            showMessage(current->getName() + " arrested " + targetName + ". Turn ended.");
-                        }
-
-                        checkForWinner();
-                        if (currentState != State::GameOver) {
-                            updateButtons();
-                        }
-                    } catch (const std::exception& e) {
-                        showPopup("Error: " + std::string(e.what()));
-                        turnInProgress = false;
-                        waitingForBribeDecision = false;
-                    }
-                } else {
-                    showPopup("Error: Target player no longer exists");
-                }
-            });
-
-            addButton("Sanction " + targetName, [=]() {
-                // Find target safely each time
-                Player* safeTarget = nullptr;
-                for (auto* p : players) {
-                    if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
-                        safeTarget = p;
-                        break;
-                    }
-                }
-
-                if (safeTarget) {
-                    try {
-                        current->sanction(*safeTarget); // This calls endTurn() internally
-                        turnInProgress = false;
-
-                        // Check if player can bribe AFTER the action
-                        if (current->canUseBribe()) {
-                            waitingForBribeDecision = true;
-                            showMessage(current->getName() + " sanctioned " + targetName + ". Choose: Bribe for bonus action or End Turn.");
-                        } else {
-                            showMessage(current->getName() + " sanctioned " + targetName + ". Turn ended.");
-                        }
-
-                        checkForWinner();
-                        if (currentState != State::GameOver) {
-                            updateButtons();
-                        }
-                    } catch (const std::exception& e) {
-                        showPopup("Error: " + std::string(e.what()));
-                        turnInProgress = false;
-                        waitingForBribeDecision = false;
-                    }
-                } else {
-                    showPopup("Error: Target player no longer exists");
-                }
-            });
-
-            addButton("Coup " + targetName, [=]() {
-                try {
-                    // Find target safely each time
-                    Player* safeTarget = nullptr;
-                    for (auto* p : players) {
-                        if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
-                            safeTarget = p;
-                            break;
-                        }
-                    }
-
-                    if (safeTarget) {
-                        current->coup(*safeTarget); // Coup always ends turn, no bribe possible
-                        turnInProgress = false;
-                        waitingForBribeDecision = false;
-                        showMessage(current->getName() + " couped " + targetName);
-
-                        checkForWinner();
-                        // Don't call updateButtons if game is over - prevents segfault!
-                        if (currentState != State::GameOver) {
-                            updateButtons();
-                        }
-                    } else {
-                        showPopup("Error: Target player no longer exists");
-                    }
-                } catch (const std::exception& e) {
-                    showPopup("Error: " + std::string(e.what()));
-                    turnInProgress = false;
-                    waitingForBribeDecision = false;
-                }
-            });
-        }
-
-        // Role-specific actions
-        if (dynamic_cast<Baron*>(current)) {
-            addButton("Invest", [=]() {
-                try {
-                    static_cast<Baron*>(current)->invest(); // This calls endTurn() internally
-                    turnInProgress = false;
-
-                    // Check if player can bribe AFTER the action
-                    if (current->canUseBribe()) {
-                        waitingForBribeDecision = true;
-                        showMessage(current->getName() + " invested (3 coins -> 6 coins). Choose: Bribe for bonus action or End Turn.");
-                    } else {
-                        showMessage(current->getName() + " invested (3 coins -> 6 coins). Turn ended.");
-                    }
-
-                    checkForWinner();
-                    if (currentState != State::GameOver) {
-                        updateButtons();
-                    }
-                } catch (const std::exception& e) {
-                    showPopup("Error: " + std::string(e.what()));
-                    turnInProgress = false;
-                    waitingForBribeDecision = false;
-                }
-            });
-        }
-
-        if (auto spy = dynamic_cast<Spy*>(current)) {
-            for (auto* target : validTargets) {
-                std::string targetName = target->getName();
-
-                addButton("Peek " + targetName, [=]() {
-                    try {
-                        // Find target safely
-                        Player* safeTarget = nullptr;
-                        for (auto* p : players) {
-                            if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
-                                safeTarget = p;
-                                break;
-                            }
-                        }
-
-                        if (safeTarget) {
-                            int coins = spy->peekCoins(*safeTarget);
-                            showMessage(targetName + " has " + std::to_string(coins) + " coins");
-                            // Peek doesn't end turn or count as main action
-                        } else {
-                            showPopup("Error: Target player no longer exists");
-                        }
-                    } catch (const std::exception& e) {
-                        showPopup("Error: " + std::string(e.what()));
-                    }
-                });
-
-                addButton("Block " + targetName + " Arrest", [=]() {
-                    try {
-                        // Find target safely
-                        Player* safeTarget = nullptr;
-                        for (auto* p : players) {
-                            if (p != nullptr && game->isAlive(*p) && p->getName() == targetName) {
-                                safeTarget = p;
-                                break;
-                            }
-                        }
-
-                        if (safeTarget) {
-                            spy->blockNextArrest(*safeTarget);
-                            showMessage("Blocked " + targetName + "'s next arrest");
-                            // This doesn't count as main action
-                        } else {
-                            showPopup("Error: Target player no longer exists");
-                        }
-                    } catch (const std::exception& e) {
-                        showPopup("Error: " + std::string(e.what()));
-                    }
-                });
-            }
-        }
-
-        if (auto gov = dynamic_cast<Governor*>(current)) {
-            // Find players who did tax recently and have pending actions
-            for (auto* p : players) {
-                if (p != nullptr && p != current && game->isAlive(*p) &&
-                    game->hasPendingAction() && game->getLastActor() == p &&
-                    game->getLastActionType() == ActionType::Tax) {
-
-                    std::string targetName = p->getName();
-                    addButton("Undo " + targetName + " Tax", [=]() {
-                        try {
-                            // Find target safely
-                            Player* safeTarget = nullptr;
-                            for (auto* player : players) {
-                                if (player != nullptr && game->isAlive(*player) && player->getName() == targetName) {
-                                    safeTarget = player;
-                                    break;
-                                }
-                            }
-
-                            if (safeTarget) {
-                                gov->undo(*safeTarget);
-                                showMessage(current->getName() + " undid " + targetName + "'s tax");
-                                // This doesn't count as main action
-                            } else {
-                                showPopup("Error: Target player no longer exists");
-                            }
-                        } catch (const std::exception& e) {
-                            showPopup("Error: " + std::string(e.what()));
-                        }
-                    });
-                }
-            }
-        }
-    }
-
-    // Phase 3: During Turn - End Turn option (only if turn is still in progress)
-    if (turnInProgress && hasActed) {
-        addButton("End Turn", [=]() {
-            try {
-                current->endTurn();
-                turnInProgress = false;
-                waitingForBribeDecision = false;
-
-                checkForWinner();
-                if (currentState != State::GameOver) {
-                    try {
-                        showMessage("Turn ended. Now it's " + game->turn() + "'s turn.");
-                    } catch (...) {
-                        checkForWinner();
-                    }
-                }
-                updateButtons();
-            } catch (const std::exception& e) {
-                showPopup("Error: " + std::string(e.what()));
-                turnInProgress = false;
-                waitingForBribeDecision = false;
-            }
-        });
-    }
-}

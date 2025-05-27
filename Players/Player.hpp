@@ -186,6 +186,12 @@ namespace coup {
         virtual bool tryBlockAction(ActionType action, Player* actor, Player* target);
         virtual void undo(Player &player);
         virtual std::string getRoleName() const = 0;
+        /**
+         * @brief Checks if player has used bribe this turn.
+         * @return true if player has bribed this turn.
+         */
+        bool hasBribedThisTurn() const;
+
     };
 
 }

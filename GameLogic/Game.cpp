@@ -218,20 +218,33 @@ namespace coup {
      * @param target Optional target of the action.
      */
     void Game::requestImmediateResponse(Player *actor, ActionType action, Player *target) {
-        for (Player *p : player_list) {
-            if (p == nullptr || p == actor) continue; // בדיקה ראשונה: לא לבדוק את עצמך או nullptr
-            if (!isAlive(*p)) continue;               // בדיקה שנייה: לא לבדוק שחקנים מתים
+        // Safety check - make sure actor is valid
+        if (actor == nullptr || !isAlive(*actor)) {
+            std::cerr << "[ERROR] Invalid actor in requestImmediateResponse." << std::endl;
+            return;
+        }
 
-            // הגנה נוספת: ודא שה-actor חוקי
-            if (actor == nullptr || !isAlive(*actor)) {
-                std::cerr << "[ERROR] Invalid actor in requestImmediateResponse." << std::endl;
-                return;
+        // Create a copy of player pointers to avoid issues if players are eliminated during blocking
+        std::vector<Player*> playersToCheck;
+        for (Player *p : player_list) {
+            if (p != nullptr && p != actor && isAlive(*p)) {
+                playersToCheck.push_back(p);
             }
+        }
+
+        // Now check each player
+        for (Player *p : playersToCheck) {
+            // Double check player is still valid
+            if (!isAlive(*p)) continue;
 
             try {
                 if (p->tryBlockAction(action, actor, target)) {
                     std::cout << "[INFO] " << p->getName() << " blocks " << actor->getName() << "'s action!" << std::endl;
-                    actor->blockLastAction();
+
+                    // Make sure actor is still valid before blocking
+                    if (isAlive(*actor)) {
+                        actor->blockLastAction();
+                    }
                     return;
                 }
             } catch (const std::exception& e) {
@@ -242,6 +255,5 @@ namespace coup {
             }
         }
     }
-
 
 } // namespace coup

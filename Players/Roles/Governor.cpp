@@ -34,8 +34,10 @@ namespace coup {
         game.requestImmediateResponse(this, ActionType::Tax, nullptr);
         if (actionBlocked) {
             game.resolvePendingAction();
-            if (!bribeUsedThisTurn && askForBribe()) return;
-            game.nextTurn();
+            if (!bribeUsedThisTurn && askForBribe()) {
+                return;
+            }
+            endTurn();
             return;
         }
 
