@@ -47,30 +47,6 @@ public:
     bool visible() const { return isVisible; }
 };
 
-// Blocking decision dialog
-class BlockingDialog {
-private:
-    sf::RectangleShape overlay;
-    sf::RectangleShape dialog;
-    sf::Text messageText;
-    sf::RectangleShape yesButton;
-    sf::RectangleShape noButton;
-    sf::Text yesText;
-    sf::Text noText;
-    bool isVisible;
-    std::function<void()> onYes;
-    std::function<void()> onNo;
-
-public:
-    BlockingDialog() : isVisible(false) {}
-    BlockingDialog(const sf::Font& font) : isVisible(false) {}
-    void show(const std::string& message, std::function<void()> yesCallback, std::function<void()> noCallback) {}
-    void hide() { isVisible = false; }
-    bool handleClick(sf::Vector2i mousePos) { return false; }
-    void draw(sf::RenderWindow& window) {}
-    bool visible() const { return isVisible; }
-};
-
 // Main GUI class
 class CoupGUI {
 public:
@@ -94,16 +70,10 @@ private:
     float messageTimer;
     static constexpr float MESSAGE_DURATION = 3.0f;
     MessagePopup popup;
-    BlockingDialog blockingDialog;
 
     // Game state
     enum class State { Start, SelectCount, EnterNames, Playing, GameOver };
     State currentState = State::Start;
-
-    // Blocking decision state
-    enum class BlockingDecision { None, Pending, Yes, No };
-    BlockingDecision currentBlockingDecision = BlockingDecision::None;
-    bool blockingInProgress = false;
 
     // Game objects
     std::unique_ptr<Game> game;
@@ -119,6 +89,9 @@ private:
     // Turn management
     bool turnInProgress = false;
     bool waitingForBribeDecision = false;
+
+    // Target selection
+    std::function<void(Player*)> targetSelectionCallback;
 
     // Event handling
     void handleEvent(const sf::Event& event);
@@ -147,9 +120,13 @@ private:
     void showError(const std::string& msg);
     void showPopup(const std::string& msg);
     void loadBackgrounds();
+    void showTargetSelection(const std::string& actionName, const std::vector<Player*>& targets, std::function<void(Player*)> onTargetSelected);
+    void drawSpecialAbilities(Player* current, const std::vector<Player*>& validTargets);
+    void drawPlayerStatus();
 
     // Name validation
     bool isDuplicateName(const std::string& name) const;
+
     // Helper to get action name
     std::string getActionName(ActionType action) const {
         switch (action) {
@@ -162,9 +139,6 @@ private:
             default: return "Unknown";
         }
     }
-
-    // Process blocking decision
-    bool processBlockingDecision();
 };
 
 }

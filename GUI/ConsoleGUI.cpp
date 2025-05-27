@@ -8,7 +8,7 @@
 #include <limits>
 #include <algorithm>
 #include "../GameLogic/Game.hpp"
-#include "../GameLogic/PlayerFactory.hpp"
+#include "../GameLogic/PlayerFactory.hpp"  // Fixed include
 #include "../Players/Roles/Governor.hpp"
 #include "../Players/Roles/Spy.hpp"
 #include "../Players/Roles/Baron.hpp"
@@ -30,7 +30,7 @@ private:
     Player* pendingActor;
 
 public:
-    ConsoleGUI() : waitingForDecision(false), currentDecisionType(DecisionType::None), 
+    ConsoleGUI() : waitingForDecision(false), currentDecisionType(DecisionType::None),
                    decisionPlayer(nullptr), pendingAction(ActionType::None), pendingActor(nullptr) {}
 
     ~ConsoleGUI() {
@@ -59,7 +59,7 @@ public:
 
         cout << "\n📊 === GAME STATE === 📊" << endl;
         cout << "Bank: " << game->getBank() << " coins" << endl;
-        
+
         try {
             if (game->isGameOver()) {
                 cout << "🏁 GAME OVER! 🏁" << endl;
@@ -79,18 +79,18 @@ public:
         int playerNum = 1;
         for (Player* p : players) {
             if (p && game->isAlive(*p)) {
-                cout << playerNum++ << ". " << p->getName() 
-                     << " (" << p->getRoleName() << ") - " 
+                cout << playerNum++ << ". " << p->getName()
+                     << " (" << p->getRoleName() << ") - "
                      << p->getCoins() << " coins";
-                
+
                 if (p->isSanctioned()) cout << " [SANCTIONED]";
-                
+
                 try {
                     if (!game->isGameOver() && game->turn() == p->getName()) {
                         cout << " ⭐ (Current Turn)";
                     }
                 } catch (...) {}
-                
+
                 cout << endl;
             }
         }
@@ -115,7 +115,7 @@ public:
                 if (&blocker == p && actor != nullptr) {
                     bool canBlock = false;
                     string actionName = "action";
-                    
+
                     if (p->getRoleName() == "Governor" && action == ActionType::Tax) {
                         canBlock = true;
                         actionName = "tax";
@@ -133,11 +133,11 @@ public:
                         pendingAction = action;
                         pendingActor = const_cast<Player*>(actor);
                         waitingForDecision = true;
-                        
+
                         cout << "\n🚫 BLOCKING OPPORTUNITY!" << endl;
-                        cout << p->getName() << " (" << p->getRoleName() 
+                        cout << p->getName() << " (" << p->getRoleName()
                              << ") can block " << actor->getName() << "'s " << actionName << "!" << endl;
-                        
+
                         return false; // Don't block automatically
                     }
                 }
@@ -161,20 +161,20 @@ public:
     vector<string> getPlayerNames(int count) {
         vector<string> names;
         cout << "\n📝 Enter player names:" << endl;
-        
+
         for (int i = 0; i < count; i++) {
             string name;
             bool validName = false;
-            
+
             while (!validName) {
                 cout << "Player " << (i + 1) << " name: ";
                 getline(cin, name);
-                
+
                 if (name.empty()) {
                     cout << "❌ Name cannot be empty!" << endl;
                     continue;
                 }
-                
+
                 // Check for duplicates
                 bool duplicate = false;
                 for (const string& existingName : names) {
@@ -183,17 +183,17 @@ public:
                         break;
                     }
                 }
-                
+
                 if (duplicate) {
                     cout << "❌ Name already taken! Choose a different name." << endl;
                 } else {
                     validName = true;
                 }
             }
-            
+
             names.push_back(name);
         }
-        
+
         return names;
     }
 
@@ -204,7 +204,8 @@ public:
 
             cout << "\n🎲 Creating players with random roles..." << endl;
             for (const auto& name : playerNames) {
-                Player* p = PlayerFactory::randomPlayer(*game, name);
+                // FIXED: Use the free function, not a static method
+                Player* p = randomPlayer(*game, name);
                 players.push_back(p);
                 cout << "✅ " << name << " is a " << p->getRoleName() << endl;
             }
@@ -252,7 +253,7 @@ public:
             cout << "\n💰 BRIBE DECISION for " << decisionPlayer->getName() << endl;
             cout << "You can use bribe (4 coins) for a bonus action." << endl;
             cout << "Current coins: " << decisionPlayer->getCoins() << endl;
-            
+
             if (!decisionPlayer->canUseBribe()) {
                 cout << "❌ Cannot afford bribe or already used this turn." << endl;
                 waitingForDecision = false;
@@ -260,12 +261,12 @@ public:
                 decisionPlayer->endTurn();
                 return true;
             }
-            
+
             cout << "Use bribe? (y/n): ";
             char choice;
             cin >> choice;
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            
+
             if (choice == 'y' || choice == 'Y') {
                 try {
                     decisionPlayer->bribe();
@@ -277,14 +278,14 @@ public:
                 decisionPlayer->endTurn();
                 cout << "✅ " << decisionPlayer->getName() << "'s turn ended." << endl;
             }
-            
+
         } else if (currentDecisionType == DecisionType::Block) {
             cout << "\n🛡️ BLOCK DECISION for " << decisionPlayer->getName() << endl;
             cout << "Block the action? (y/n): ";
             char choice;
             cin >> choice;
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            
+
             if (choice == 'y' || choice == 'Y') {
                 try {
                     if (pendingAction == ActionType::Tax && decisionPlayer->getRoleName() == "Governor") {
@@ -302,7 +303,7 @@ public:
                 cout << "✅ " << decisionPlayer->getName() << " chose not to block." << endl;
             }
         }
-        
+
         waitingForDecision = false;
         currentDecisionType = DecisionType::None;
         decisionPlayer = nullptr;
@@ -312,10 +313,10 @@ public:
     }
 
     void showActions(Player* current) {
-        cout << "\n🎯 Available actions for " << current->getName() 
+        cout << "\n🎯 Available actions for " << current->getName()
              << " (" << current->getRoleName() << "):" << endl;
         cout << "Coins: " << current->getCoins() << endl;
-        
+
         // Check forced coup
         if (current->getCoins() >= 10) {
             cout << "⚠️ YOU MUST COUP! (10+ coins)" << endl;
@@ -325,13 +326,13 @@ public:
             }
             return;
         }
-        
+
         int actionNum = 1;
-        
+
         // Basic actions
         cout << actionNum++ << ". Gather (1 coin)" << endl;
         cout << actionNum++ << ". Tax (" << current->taxAmount() << " coins)" << endl;
-        
+
         // Targeted actions
         vector<Player*> targets = getValidTargets(current);
         for (auto* target : targets) {
@@ -343,13 +344,14 @@ public:
         for (auto* target : targets) {
             cout << actionNum++ << ". Coup " << target->getName() << " (eliminate - 7 coins)" << endl;
         }
-        
+
         // Role-specific actions
         if (dynamic_cast<Baron*>(current) && current->getCoins() >= 3) {
             cout << actionNum++ << ". Invest (3 → 6 coins)" << endl;
         }
-        
-        if (auto spy = dynamic_cast<Spy*>(current)) {
+
+        // Fixed: Remove unused variable warnings
+        if (dynamic_cast<Spy*>(current)) {
             for (auto* target : targets) {
                 cout << actionNum++ << ". Peek at " << target->getName() << "'s coins" << endl;
             }
@@ -357,8 +359,9 @@ public:
                 cout << actionNum++ << ". Block " << target->getName() << "'s next arrest" << endl;
             }
         }
-        
-        if (auto gov = dynamic_cast<Governor*>(current)) {
+
+        // Fixed: Remove unused variable warnings
+        if (dynamic_cast<Governor*>(current)) {
             for (auto* p : players) {
                 if (p && p != current && game->isAlive(*p) &&
                     game->hasPendingAction() && game->getLastActor() == p &&

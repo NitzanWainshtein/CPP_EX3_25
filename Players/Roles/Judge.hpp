@@ -60,8 +60,9 @@ namespace coup {
 
         /**
          * @brief Unused for Judge; override exists for interface completeness.
+         * @param player Unused parameter (marked to avoid warning).
          */
-        void undo(Player &player) override {}
+        void undo(Player & /*player*/) override {}
     };
 
 }
