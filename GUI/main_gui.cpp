@@ -1,23 +1,25 @@
-// Email: nitzanwa@gmail.com
-
+// GUI/main.cpp
+#include "CoupGUI.hpp"
 #include <iostream>
-#include "GameGUI.hpp"
-
-using namespace std;
-using namespace coup;
 
 int main() {
     try {
-        cout << "🎮 Starting Coup GUI..." << endl;
+        std::cout << "🎮 Starting Coup GUI..." << std::endl;
 
-        CoupGUI gui;
+        coup::gui::CoupGUI gui;
+
+        if (!gui.initialize()) {
+            std::cerr << "Failed to initialize GUI!" << std::endl;
+            return 1;
+        }
+
         gui.run();
 
-        cout << "👋 Thanks for playing!" << endl;
+        std::cout << "👋 Thanks for playing!" << std::endl;
         return 0;
 
-    } catch (const exception& e) {
-        cerr << "❌ GUI Error: " << e.what() << endl;
+    } catch (const std::exception& e) {
+        std::cerr << "❌ Fatal error: " << e.what() << std::endl;
         return 1;
     }
 }

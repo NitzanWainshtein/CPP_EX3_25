@@ -34,7 +34,7 @@ namespace coup {
         bool actionBlocked;          ///< Whether the last action was blocked.
         bool bribeUsedThisTurn;      ///< Flag for bribe usage this turn.
         bool arrestBlocked;          ///< Flag for arrest block by Spy.
-
+        static bool guiMode;
         // Decision callbacks
         BribeDecisionCallback bribeDecisionCallback;
         BlockDecisionCallback blockDecisionCallback;
@@ -127,7 +127,8 @@ namespace coup {
          * @brief Resets turn state manually (for GUI forced coup with 10+ coins).
          */
         void resetTurnState();
-
+        static void setGuiMode(bool mode) { guiMode = mode; }
+        static bool isGuiMode() { return guiMode; }
         /**
          * @brief Gets the current bribe callback (for GUI override).
          */
