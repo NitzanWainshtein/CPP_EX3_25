@@ -3,65 +3,59 @@
 #pragma once
 
 #include "../Player.hpp"
+#include "../../GameLogic/Game.hpp"
+#include <string>
 
 namespace coup {
 
     /**
      * @class Governor
-     * @brief Represents the Governor role in the game.
-     *
-     * The Governor collects 3 coins instead of 2 when performing a tax action.
-     * Additionally, the Governor can undo a pending tax action performed by another player,
-     * provided it is the last action made.
+     * @brief Governor role with enhanced taxation and tax blocking abilities
+     * 
+     * Special abilities:
+     * - Collects 3 coins from tax instead of 2
+     * - Can block other players' tax actions
      */
     class Governor : public Player {
     public:
         /**
-         * @brief Constructs a Governor player.
-         * @param game Reference to the game instance.
-         * @param name The player's name.
+         * @brief Constructor
+         * @param game Reference to game instance
+         * @param name Player's name
          */
         Governor(Game &game, const std::string &name);
 
+        /**
+         * @brief Destructor
+         */
+        ~Governor() override = default;
+        
+        /**
+         * @brief Rule of Five - explicitly deleted for this role
+         */
         Governor(const Governor& other) = delete;
         Governor& operator=(const Governor& other) = delete;
         Governor(Governor&& other) = delete;
         Governor& operator=(Governor&& other) = delete;
 
+        /**
+         * @brief Get role name
+         * @return "Governor"
+         */
+        std::string getRoleName() const override;
 
         /**
-         * @brief Performs a special tax action worth 3 coins.
-         * The coins are collected during endTurn().
+         * @brief Enhanced tax collection - gets 3 coins
+         * @throws std::runtime_error if sanctioned or not turn
          */
         void tax() override;
 
         /**
-         * @brief Returns the tax amount for the Governor (3 coins).
+         * @brief Block another player's tax action
+         * @param actor Player whose tax to block
+         * @throws std::runtime_error if invalid block attempt
          */
-        int taxAmount() const override;
-
-        /**
-         * @brief Cancels a pending tax action performed by the last acting player.
-         * Can only be used by the Governor.
-         *
-         * @param player The player whose tax action is being undone.
-         */
-        void undo(Player &player) override;
-
-        /**
-         * @brief Attempts to block tax actions from other players in real-time.
-         * @param action The action type being attempted.
-         * @param actor The player performing the action.
-         * @param target The target of the action (unused for tax).
-         * @return true if the action is blocked, false otherwise.
-         */
-        bool tryBlockAction(ActionType action, Player* actor, Player* target) override;
-
-        /**
-         * @brief Returns the name of the role.
-         * @return A string: "Governor"
-         */
-        std::string getRoleName() const override;
+        void blockTax(Player &actor);
     };
 
 }

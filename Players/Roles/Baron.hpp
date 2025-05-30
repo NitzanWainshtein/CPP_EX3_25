@@ -10,34 +10,41 @@ namespace coup {
 
     /**
      * @class Baron
-     * @brief Represents the Baron role in the game.
-     *
-     * The Baron can perform an investment action, paying 3 coins to receive 6 in return.
-     * Additionally, if targeted by a sanction, the Baron receives 1 coin as compensation (handled in Player logic).
+     * @brief Baron role with investment and economic resilience abilities
+     * 
+     * Special abilities:
+     * - Can invest 3 coins to receive 6 coins back
+     * - Receives 1 coin compensation when sanctioned
      */
     class Baron : public Player {
     public:
         /**
-         * @brief Constructs a Baron player.
-         * @param game Reference to the game instance.
-         * @param name The player's name.
+         * @brief Constructor
+         * @param game Reference to game instance
+         * @param name Player's name
          */
         Baron(Game &game, const std::string &name);
 
+        /**
+         * @brief Destructor
+         */
+        ~Baron() override = default;
+        
+        /**
+         * @brief Rule of Three - explicitly deleted
+         */
         Baron(const Baron& other) = delete;
         Baron& operator=(const Baron& other) = delete;
-        Baron(Baron&& other) = delete;
-        Baron& operator=(Baron&& other) = delete;
 
         /**
-         * @brief Special ability: Invest 3 coins to receive 6.
-         * @throws std::runtime_error if not the player's turn or insufficient coins.
+         * @brief Invest 3 coins to receive 6 coins
+         * @throws std::runtime_error if insufficient coins or not turn
          */
         void invest();
-
+        
         /**
-         * @brief Returns the name of the role.
-         * @return A string: "Baron".
+         * @brief Get role name
+         * @return "Baron"
          */
         std::string getRoleName() const override;
     };

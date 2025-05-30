@@ -7,66 +7,53 @@
 #include "../Players/Roles/General.hpp"
 #include "../Players/Roles/Judge.hpp"
 #include "../Players/Roles/Merchant.hpp"
+#include "Logger.hpp"
 
 #include <random>
 #include <string>
 #include <stdexcept>
-#include <iostream>
-
-using namespace std;
 
 namespace coup {
 
-    Player *randomPlayer(Game &game, const string &name) {
-        // Validate name
-        if (name.empty()) {
-            throw std::runtime_error("Player name cannot be empty");
-        }
+    Player* randomPlayer(Game &game, const std::string &name) {
+        Logger::log("Attempting to add random player: " + name);
 
         if (game.nameExists(name)) {
             throw std::runtime_error("Name '" + name + "' already exists in game");
         }
 
-        // Create random number generator
-        static random_device rd;
-        static mt19937 gen(rd());
-        uniform_int_distribution<> dis(0, 5);
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 5);
 
-        Player* newPlayer = nullptr;
+        int num = dis(gen);
+        Player *newPlayer = nullptr;
 
-        try {
-            int num = dis(gen);
-            switch (num) {
-                case 0:
-                    newPlayer = new Governor(game, name);
-                    break;
-                case 1:
-                    newPlayer = new Spy(game, name);
-                    break;
-                case 2:
-                    newPlayer = new Baron(game, name);
-                    break;
-                case 3:
-                    newPlayer = new General(game, name);
-                    break;
-                case 4:
-                    newPlayer = new Judge(game, name);
-                    break;
-                case 5:
-                    newPlayer = new Merchant(game, name);
-                    break;
-                default:
-                    throw runtime_error("Invalid random number for role selection");
-            }
-
-            std::cout << "[DEBUG] Created player: " << name << " as " << newPlayer->getRoleName() << std::endl;
-            return newPlayer;
-
-        } catch (const std::exception& e) {
-            // Clean up if allocation succeeded but constructor failed
-            delete newPlayer;
-            throw std::runtime_error("Failed to create player: " + std::string(e.what()));
+        switch (num) {
+            case 0:
+                newPlayer = new Governor(game, name);
+                break;
+            case 1:
+                newPlayer = new Spy(game, name);
+                break;
+            case 2:
+                newPlayer = new Baron(game, name);
+                break;
+            case 3:
+                newPlayer = new General(game, name);
+                break;
+            case 4:
+                newPlayer = new Judge(game, name);
+                break;
+            case 5:
+                newPlayer = new Merchant(game, name);
+                break;
+            default:
+                throw std::runtime_error("Invalid index for role selection");
         }
+
+        Logger::log("Added player " + name + " with role: " + newPlayer->getRoleName());
+        return newPlayer;
     }
 
 }

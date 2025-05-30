@@ -1,73 +1,41 @@
 // Email: nitzanwa@gmail.com
 
 #include "Judge.hpp"
-#include "../../GameLogic/Game.hpp"
 #include "../../GameLogic/BankManager.hpp"
+#include "../../GameLogic/Logger.hpp"
 #include <stdexcept>
 
 namespace coup {
 
-    /**
-     * @brief Constructs a Judge player.
-     * @param game Reference to the current game.
-     * @param name The name of the player.
-     */
-    Judge::Judge(Game& game, const std::string& name)
+    Judge::Judge(Game &game, const std::string &name)
         : Player(game, name) {}
 
-    /**
-     * @brief Returns the name of the role.
-     * @return A string: "Judge"
-     */
     std::string Judge::getRoleName() const {
         return "Judge";
     }
 
-    /**
-     * @brief Determines whether the Judge wants to block a bribe action.
-     *
-     * Uses the blockDecisionCallback to ask the human player for decision.
-     * If no callback is set, defaults to not blocking.
-     *
-     * @param actingPlayer The player who performed the bribe.
-     * @return true if the bribe should be blocked.
-     */
-    bool Judge::shouldBlockBribe(Player& actingPlayer) {
-        return askForBlock(ActionType::Bribe, &actingPlayer);
-    }
+    void Judge::blockBribe(Player &actor) {
+        Logger::log(name + " is attempting to block bribe from " + actor.getName());
 
-    /**
-     * @brief Attempts to block a bribe action from the given player.
-     *
-     * If the player's last action was a bribe and shouldBlockBribe returns true,
-     * the bribe is blocked.
-     *
-     * @param player The player who performed the bribe.
-     * @return true if the bribe was blocked.
-     */
-    bool Judge::tryBlockBribe(Player& player) {
-        if (player.getLastAction() == ActionType::Bribe && shouldBlockBribe(player)) {
-            player.blockLastAction();
-            return true;
+        if (&actor == this) {
+            throw std::runtime_error("Judge cannot block their own bribe");
         }
-        return false;
-    }
 
-    /**
-     * @brief General override for action blocking.
-     *
-     * Called by the game engine to allow Judge to react to a bribe.
-     *
-     * @param action The type of action being attempted.
-     * @param actor The player who performed the action.
-     * @param target (unused) Optional target player.
-     * @return true if the action was blocked.
-     */
-    bool Judge::tryBlockAction(ActionType action, Player* actor, Player*) {
-        if (action == ActionType::Bribe && actor != nullptr && game.isAlive(*actor)) {
-            return tryBlockBribe(*actor);
+        if (!game.hasPendingAction()) {
+            throw std::runtime_error("No pending action to block");
         }
-        return false;
+
+        if (actor.getLastAction() != ActionType::Bribe) {
+            throw std::runtime_error(actor.getName() + " did not perform a bribe action");
+        }
+
+        if (actor.getCoins() < 0) {
+            throw std::runtime_error(actor.getName() + " has invalid coin state");
+        }
+
+        // Important: money was already paid to bank during bribe
+        actor.blockLastAction();
+        Logger::log(name + " blocked bribe of " + actor.getName() + ", they lose their 4 coins permanently");
     }
 
 }

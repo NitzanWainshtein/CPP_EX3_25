@@ -1,74 +1,54 @@
 // Email: nitzanwa@gmail.com
 
-#pragma once
+#ifndef BANK_MANAGER_HPP
+#define BANK_MANAGER_HPP
 
-#include "../Players/Player.hpp"
+#include <stdexcept>
 #include "Game.hpp"
+#include "../Players/Player.hpp"
 
 namespace coup {
 
     /**
      * @class BankManager
-     * @brief Utility class for managing coin transactions in the game.
-     *
-     * All methods are static and handle transfers between players and the central bank.
+     * @brief Static utility class for managing coin transfers
+     * 
+     * Provides safe methods for transferring coins between:
+     * - Bank and players
+     * - Player to player
+     * 
+     * All methods validate sufficient funds before transfer
      */
     class BankManager {
     public:
-
-        BankManager() = delete;  // Prevent instantiation (it's all static methods)
-        BankManager(const BankManager& other) = delete;
-        BankManager& operator=(const BankManager& other) = delete;
-        BankManager(BankManager&& other) = delete;
-        BankManager& operator=(BankManager&& other) = delete;
-
         /**
-         * @brief Transfers coins directly between two players.
-         *
-         * @param from The player giving coins.
-         * @param to The player receiving coins.
-         * @param amount Number of coins to transfer.
-         * @throws std::runtime_error if 'from' has insufficient coins.
+         * @brief Transfer coins from bank to player
+         * @param player Recipient player
+         * @param game Game instance containing the bank
+         * @param amount Number of coins to transfer
+         * @throws std::runtime_error if invalid amount or insufficient bank funds
          */
-        static void transferCoins(Player& from, Player& to, int amount);
-
+        static void transferFromBank(Player &player, Game &game, int amount);
+        
         /**
-         * @brief Adds coins to the central bank.
-         *
-         * @param game The game instance containing the bank.
-         * @param amount Number of coins to add.
-         * @throws std::runtime_error if amount is negative.
+         * @brief Transfer coins from player to bank
+         * @param player Source player
+         * @param game Game instance containing the bank
+         * @param amount Number of coins to transfer
+         * @throws std::runtime_error if invalid amount or insufficient player funds
          */
-        static void addToBank(Game& game, int amount);
-
+        static void transferToBank(Player &player, Game &game, int amount);
+        
         /**
-         * @brief Removes coins from the central bank.
-         *
-         * @param game The game instance containing the bank.
-         * @param amount Number of coins to remove.
-         * @throws std::runtime_error if the bank has insufficient coins.
+         * @brief Transfer coins between players
+         * @param from Source player
+         * @param to Recipient player
+         * @param amount Number of coins to transfer
+         * @throws std::runtime_error if invalid amount or insufficient funds
          */
-        static void takeFromBank(Game& game, int amount);
-
-        /**
-         * @brief Transfers coins from a player to the bank.
-         *
-         * @param from The player paying coins.
-         * @param game The game instance.
-         * @param amount Number of coins to transfer.
-         * @throws std::runtime_error if the player has insufficient coins.
-         */
-        static void transferToBank(Player& from, Game& game, int amount);
-
-        /**
-         * @brief Transfers coins from the bank to a player.
-         *
-         * @param game The game instance.
-         * @param to The player receiving coins.
-         * @param amount Number of coins to transfer.
-         * @throws std::runtime_error if the bank has insufficient coins.
-         */
-        static void transferFromBank(Game& game, Player& to, int amount);
+        static void transferCoins(Player &from, Player &to, int amount);
     };
 
 }
+
+#endif // BANK_MANAGER_HPP

@@ -2,45 +2,48 @@
 
 #pragma once
 
-#include "../Player.hpp"
 #include "../../GameLogic/Game.hpp"
+#include "../Player.hpp"
 #include <string>
 
 namespace coup {
 
     /**
      * @class Merchant
-     * @brief Represents the Merchant role in the game.
-     *
-     * The Merchant gains 1 extra coin at the start of their turn if they have at least 3 coins.
-     * If their last action was blocked (e.g., Tax), they refund the coins automatically.
+     * @brief Merchant role with wealth-based bonuses and special arrest handling
+     * 
+     * Special abilities:
+     * - Receives 1 bonus coin at start of turn if has 3+ coins
+     * - When arrested, pays 2 coins to bank instead of 1 to attacker
      */
     class Merchant : public Player {
     public:
         /**
-         * @brief Constructs a Merchant player.
-         * @param game Reference to the game instance.
-         * @param name The player's name.
+         * @brief Constructor
+         * @param game Reference to game instance
+         * @param name Player's name
          */
         Merchant(Game &game, const std::string &name);
 
-        // Rule of Three/Five
+        /**
+         * @brief Destructor
+         */
+        ~Merchant() override = default;
+        
+        /**
+         * @brief Rule of Three - explicitly deleted
+         */
         Merchant(const Merchant& other) = delete;
         Merchant& operator=(const Merchant& other) = delete;
-        Merchant(Merchant&& other) = delete;
-        Merchant& operator=(Merchant&& other) = delete;
 
         /**
-         * @brief Called at the start of the turn.
-         *
-         * Calls base Player::startTurn() first for proper setup,
-         * then if the player has 3+ coins, they receive 1 bonus coin.
+         * @brief Called at start of turn, adds bonus coin if wealthy
          */
         void startTurn() override;
-
+        
         /**
-         * @brief Returns the name of the role.
-         * @return A string: "Merchant"
+         * @brief Get role name
+         * @return "Merchant"
          */
         std::string getRoleName() const override;
     };
